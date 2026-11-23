@@ -9,6 +9,7 @@
 
 manipulation-kit is the publisher's motion library; its repository is not public, so the paths and
 the commit identify the source for maintainers.
+manipulation-kit's CI compares its d1 outputs with this copy and flags any difference.
 
 `d1.urdf` is the mesh-free composition: every link's geometry is a box,
 cylinder or sphere, so the primitive visual variant needs no other file.
