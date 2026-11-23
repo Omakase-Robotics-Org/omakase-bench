@@ -1,0 +1,5 @@
+id: games
+version: 1
+description: Board games between robots, one model per robot, ruled by a referee.
+tasks: [chess]
+seeds: [0, 1, 2]

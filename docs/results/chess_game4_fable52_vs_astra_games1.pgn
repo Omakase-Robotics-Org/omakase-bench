@@ -1,0 +1,10 @@
+[Event "omakase-bench games/chess (games@1)"]
+[Site "MuJoCo simulation"]
+[Date "2026.11.22"]
+[Round "4"]
+[White "claude-fable-5-2 (robot a)"]
+[Black "gpt-6.2-astra (robot b)"]
+[Result "0-1"]
+[Termination "loss by manipulation faults (white, fault 3 of 3)"]
+
+1. e4 c5 2. Nf3 d6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 a6 6. Be2 e5 7. Nb3 Be7 8. Be3 Be6 9. f4 Qc7 10. f5 Bc4 11. g4 d5 12. g5 Nxe4 13. Nxe4 dxe4 14. Bxc4 0-1

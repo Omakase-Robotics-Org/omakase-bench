@@ -1,0 +1,2972 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Composed by manipulation_kit.description.compose from preset 'd1'.
+     Edit the modules or the preset, not this file. -->
+<robot name="d1">
+
+  <!-- planar base joints under a ground-level world -->
+
+  <link name="world" />
+
+  <joint name="base_x_joint" type="prismatic">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="world" />
+    <child link="base_x_link" />
+    <axis xyz="1 0 0" />
+    <limit lower="-10" upper="10" effort="500" velocity="1.5" />
+  </joint>
+
+  <link name="base_x_link">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <joint name="base_y_joint" type="prismatic">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="base_x_link" />
+    <child link="base_y_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-10" upper="10" effort="500" velocity="1.5" />
+  </joint>
+
+  <link name="base_y_link">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <joint name="base_yaw_joint" type="continuous">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="base_y_link" />
+    <child link="base_footprint" />
+    <axis xyz="0 0 1" />
+    <limit effort="500" velocity="1.5" />
+  </joint>
+
+  <!-- base: d1/amr -->
+
+  <link name="base_footprint">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+         physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <joint name="base_link_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="base_footprint" />
+    <child link="base_link" />
+  </joint>
+
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="89.8" />
+      <inertia ixx="1e-3" ixy="0" ixz="0" iyy="1e-3" iyz="0" izz="1e-3" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0.003 0.6387" rpy="0 0 0" />
+      <geometry>
+        <box size="0.14 0.14 0.5" />
+      </geometry>
+      <material name="d1_white">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.01775 0.00325 0.3872" rpy="0 0 0" />
+      <geometry>
+        <box size="0.5395 0.4805 0.223" />
+      </geometry>
+      <material name="d1_white">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.0046 0.003 0.1916" rpy="0 0 0" />
+      <geometry>
+        <box size="0.6454 0.497 0.3832" />
+      </geometry>
+      <material name="d1_white">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <!-- AMR lift pole - CAD X+/-70 Y+/-70 Z-600..-100 (upper half overlaps the belly shell) -->
+    <collision name="lift_pole">
+      <origin xyz="0 0.003 0.6387" rpy="0 0 0" />
+      <geometry>
+        <box size="0.14 0.14 0.5" />
+      </geometry>
+    </collision>
+    <!-- chassis top cover - CAD X+/-240 Y-252..287.5 Z-713..-490 -->
+    <collision name="chassis_cover">
+      <origin xyz="-0.01775 0.00325 0.3872" rpy="0 0 0" />
+      <geometry>
+        <box size="0.5395 0.4805 0.223" />
+      </geometry>
+    </collision>
+    <!-- drive base incl. wheels - CAD X+/-248.5 Y-318.1..327.3 Z-988.7..-605.5; ground plane at z=-0.4887 -->
+    <collision name="chassis_body">
+      <origin xyz="-0.0046 0.003 0.1916" rpy="0 0 0" />
+      <geometry>
+        <box size="0.6454 0.497 0.3832" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="body_mount_joint" type="fixed">
+    <origin xyz="0 0 0.513" rpy="0 0 0" />
+    <parent link="base_link" />
+    <child link="body_mount" />
+  </joint>
+
+  <link name="body_mount">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <!-- body: d1/body (rev2) -->
+
+  <joint name="body_attach_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="body_mount" />
+    <child link="body_root" />
+  </joint>
+
+  <link name="body_root">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <joint name="lift_joint" type="prismatic">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="body_root" />
+    <child link="torso_link" />
+    <axis xyz="0 0 1" />
+    <limit lower="0" upper="0.3" effort="1000" velocity="0.018" />
+  </joint>
+
+  <link name="torso_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="5" />
+      <inertia ixx="1e-3" ixy="0" ixz="0" iyy="1e-3" iyz="0" izz="1e-3" />
+    </inertial>
+  </link>
+
+  <joint name="torso_column_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="torso_link" />
+    <child link="torso_column_link" />
+  </joint>
+
+  <link name="torso_column_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="20.964" />
+      <inertia ixx="1e-3" ixy="0" ixz="0" iyy="1e-3" iyz="0" izz="1e-3" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.2845" rpy="0 0 0" />
+      <geometry>
+        <box size="0.09 0.11 0.411" />
+      </geometry>
+      <material name="d1_white">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0.003 0.4725" rpy="0 0 0" />
+      <geometry>
+        <box size="0.17 0.17 0.175" />
+      </geometry>
+      <material name="d1_white">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.08415 0.003 0.495" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0323 0.119 0.119" />
+      </geometry>
+      <material name="d1_white">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.0015 0.003 0.5375" rpy="0 0 0" />
+      <geometry>
+        <box size="0.249 0.3 0.195" />
+      </geometry>
+      <material name="d1_white">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.0175 0 0.315" rpy="0 0 0" />
+      <geometry>
+        <box size="0.145 0.22 0.25" />
+      </geometry>
+      <material name="d1_white">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.095 0 0.315" rpy="0 0 0" />
+      <geometry>
+        <box size="0.08 0.06 0.25" />
+      </geometry>
+      <material name="d1_white">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.11 0 0.315" rpy="0 0 0" />
+      <geometry>
+        <box size="0.04 0.14 0.25" />
+      </geometry>
+      <material name="d1_white">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.055 0.03 0.315" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.08" length="0.25" />
+      </geometry>
+      <material name="d1_white">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.055 -0.03 0.315" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.08" length="0.25" />
+      </geometry>
+      <material name="d1_white">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.09 0.07 0.315" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.04" length="0.25" />
+      </geometry>
+      <material name="d1_white">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.09 -0.07 0.315" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.04" length="0.25" />
+      </geometry>
+      <material name="d1_white">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <!-- keep-out column (safety_zones.json torso_keepout_box, chest-bracket width), starting at the moving sleeve's lower lip - the 79 mm below it is fixed column inside lift_pole -->
+    <collision name="torso_core">
+      <origin xyz="0 0 0.2845" rpy="0 0 0" />
+      <geometry>
+        <box size="0.09 0.11 0.411" />
+      </geometry>
+    </collision>
+    <!-- robot support frame between the shoulders - CAD bbox X+/-85 Y+/-85 Z-115..60 -->
+    <collision name="torso_frame">
+      <origin xyz="0 0.003 0.4725" rpy="0 0 0" />
+      <geometry>
+        <box size="0.17 0.17 0.175" />
+      </geometry>
+    </collision>
+    <!-- M260C smart speaker, front of chest - CAD bbox X+/-59.5 Y-100.3..-68 Z-64.5..54.5 -->
+    <collision name="torso_speaker">
+      <origin xyz="0.08415 0.003 0.495" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0323 0.119 0.119" />
+      </geometry>
+    </collision>
+    <!-- body-shell shoulder band (z -50..135, X up to +/-150): the arm Base barrels pass through this cover, so it is exempt from the guard keep-out -->
+    <collision name="torso_shoulder_shell_exempt">
+      <origin xyz="-0.0015 0.003 0.5375" rpy="0 0 0" />
+      <geometry>
+        <box size="0.249 0.3 0.195" />
+      </geometry>
+    </collision>
+    <!-- belly band core: the measured torso box between the rounded edges -->
+    <collision name="torso_belly">
+      <origin xyz="-0.0175 0 0.315" rpy="0 0 0" />
+      <geometry>
+        <box size="0.145 0.22 0.25" />
+      </geometry>
+    </collision>
+    <!-- belly band, front face between the front rounded edges -->
+    <collision name="torso_belly__front">
+      <origin xyz="0.095 0 0.315" rpy="0 0 0" />
+      <geometry>
+        <box size="0.08 0.06 0.25" />
+      </geometry>
+    </collision>
+    <!-- belly band, back face between the back rounded edges -->
+    <collision name="torso_belly__back">
+      <origin xyz="-0.11 0 0.315" rpy="0 0 0" />
+      <geometry>
+        <box size="0.04 0.14 0.25" />
+      </geometry>
+    </collision>
+    <!-- belly band, front-left rounded edge -->
+    <collision name="torso_belly__front_left">
+      <origin xyz="0.055 0.03 0.315" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.08" length="0.25" />
+      </geometry>
+    </collision>
+    <!-- belly band, front-right rounded edge -->
+    <collision name="torso_belly__front_right">
+      <origin xyz="0.055 -0.03 0.315" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.08" length="0.25" />
+      </geometry>
+    </collision>
+    <!-- belly band, back-left rounded edge -->
+    <collision name="torso_belly__back_left">
+      <origin xyz="-0.09 0.07 0.315" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.04" length="0.25" />
+      </geometry>
+    </collision>
+    <!-- belly band, back-right rounded edge -->
+    <collision name="torso_belly__back_right">
+      <origin xyz="-0.09 -0.07 0.315" rpy="0 0 0" />
+      <geometry>
+        <cylinder radius="0.04" length="0.25" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="neck_pan_joint" type="revolute">
+    <origin xyz="0.0016171 0 0.621" rpy="0 0 0" />
+    <parent link="torso_column_link" />
+    <child link="neck_pan_link" />
+    <axis xyz="0 0 -1" />
+    <limit lower="-1.57" upper="1.57" effort="3" velocity="3.14" />
+  </joint>
+
+  <link name="neck_pan_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1.291" />
+      <inertia ixx="1e-3" ixy="0" ixz="0" iyy="1e-3" iyz="0" izz="1e-3" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.042" rpy="0 0 0" />
+      <geometry>
+        <box size="0.057 0.051 0.084" />
+      </geometry>
+      <material name="d1_silver">
+        <color rgba="0.48 0.54 0.60 1" />
+      </material>
+    </visual>
+    <!-- head mesh bbox in this link's frame -->
+    <collision name="neck_pan_link_shell">
+      <origin xyz="0 0 0.042" rpy="0 0 0" />
+      <geometry>
+        <box size="0.057 0.051 0.084" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="neck_tilt_joint" type="revolute">
+    <origin xyz="0 0.0285 0.0555" rpy="-1.5708 0 0" />
+    <parent link="neck_pan_link" />
+    <child link="head_link" />
+    <axis xyz="0 0 1" />
+    <limit lower="-0.35" upper="0.65" effort="3" velocity="3.14" />
+  </joint>
+
+  <link name="head_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="2.072" />
+      <inertia ixx="1e-3" ixy="0" ixz="0" iyy="1e-3" iyz="0" izz="1e-3" />
+    </inertial>
+    <visual>
+      <origin xyz="0.0143 -0.0344 -0.0285" rpy="0 0 0" />
+      <geometry>
+        <box size="0.2008 0.185 0.19" />
+      </geometry>
+      <material name="d1_white">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <!-- head mesh bbox in this link's frame -->
+    <collision name="head_link_shell">
+      <origin xyz="0.0143 -0.0344 -0.0285" rpy="0 0 0" />
+      <geometry>
+        <box size="0.2008 0.185 0.19" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="arm_mount_left_joint" type="fixed">
+    <origin xyz="0 0.037 0.5" rpy="-1.5708 0 0" />
+    <parent link="torso_column_link" />
+    <child link="arm_mount_left" />
+  </joint>
+
+  <link name="arm_mount_left">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <joint name="arm_mount_right_joint" type="fixed">
+    <origin xyz="0 -0.037 0.5" rpy="1.5708 0 0" />
+    <parent link="torso_column_link" />
+    <child link="arm_mount_right" />
+  </joint>
+
+  <link name="arm_mount_right">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <joint name="head_camera_mount_joint" type="fixed">
+    <origin xyz="0.097157 -0.067339 -0.028525" rpy="0 0 0.261799" />
+    <parent link="head_link" />
+    <child link="head_camera_mount" />
+  </joint>
+
+  <link name="head_camera_mount">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <joint name="chest_camera_mount_joint" type="fixed">
+    <origin xyz="0.088257 0 0.562535" rpy="-1.570796 -0.261799 0" />
+    <parent link="torso_column_link" />
+    <child link="chest_camera_mount" />
+  </joint>
+
+  <link name="chest_camera_mount">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <joint name="back_camera_mount_joint" type="fixed">
+    <origin xyz="-0.130068 0 0.47925" rpy="-1.570796 0 3.141593" />
+    <parent link="torso_column_link" />
+    <child link="back_camera_mount" />
+  </joint>
+
+  <link name="back_camera_mount">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <!-- left arm: d1/arm_7dof -->
+
+  <joint name="left_arm_attach_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="arm_mount_left" />
+    <child link="left_arm_base" />
+  </joint>
+
+  <link name="left_arm_base">
+    <inertial>
+      <origin xyz="1.1648e-04 -9.321e-05 3.390668e-02" rpy="0 0 0" />
+      <mass value="0.973941905" />
+      <inertia ixx="0.000745715587" ixy="-1.70800638e-07" ixz="8.7677661e-06" iyy="0.000762123835" iyz="2.28872855e-06" izz="0.000922152646" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.0793" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0566" length="0.1586" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0566" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.1586" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0566" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <collision name="left_arm_base_capsule_tube">
+      <origin xyz="0 0 0.0793" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0566" length="0.1586" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_base_capsule_tube_cap_a">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0566" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_base_capsule_tube_cap_b">
+      <origin xyz="0 0 0.1586" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0566" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_arm_joint1" type="revolute">
+    <origin xyz="0 0 0.1586" rpy="0 0 0" />
+    <parent link="left_arm_base" />
+    <child link="left_arm_link1" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.0194" upper="3.0194" effort="35" velocity="3.1416" />
+  </joint>
+
+  <link name="left_arm_link1">
+    <inertial>
+      <origin xyz="-3.3175e-04 -4.26687e-03 -3.522466e-02" rpy="0 0 0" />
+      <mass value="1.75076461" />
+      <inertia ixx="0.00417794303" ixy="2.01544753e-06" ixz="1.52809638e-05" iyy="0.004492387" iyz="-0.000266870304" izz="0.00150047222" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 -0.033" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0556" length="0.088" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 -0.077" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0556" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.011" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0556" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <collision name="left_arm_link1_capsule_tube">
+      <origin xyz="0 0 -0.033" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0556" length="0.088" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link1_capsule_tube_cap_a">
+      <origin xyz="0 0 -0.077" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0556" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link1_capsule_tube_cap_b">
+      <origin xyz="0 0 0.011" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0556" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_arm_joint2" type="revolute">
+    <origin xyz="0 0 0" rpy="1.5708 0 0" />
+    <parent link="left_arm_link1" />
+    <child link="left_arm_link2" />
+    <axis xyz="0 0 1" />
+    <limit lower="-2.0595" upper="2.0595" effort="35" velocity="3.1416" />
+  </joint>
+
+  <link name="left_arm_link2">
+    <inertial>
+      <origin xyz="2.044e-05 0.0535881 -0.00881535" rpy="0 0 0" />
+      <mass value="1.80703659" />
+      <inertia ixx="0.00741823609" ixy="9.66731613e-06" ixz="1.3550184e-06" iyy="0.00212396287" iyz="0.000864581444" izz="0.00698174937" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0485" length="0.0188" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 -0.0094" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.0094" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0.068 0" rpy="-1.5708 0 0" />
+      <geometry>
+        <cylinder radius="0.0425" length="0.039" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0.0485 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0425" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0.0875 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0425" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <collision name="left_arm_link2_capsule_housing_j2">
+      <origin xyz="0 0 0" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0485" length="0.0188" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link2_capsule_housing_j2_cap_a">
+      <origin xyz="0 0 -0.0094" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link2_capsule_housing_j2_cap_b">
+      <origin xyz="0 0 0.0094" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link2_capsule_tube">
+      <origin xyz="0 0.068 0" rpy="-1.5708 0 0" />
+      <geometry>
+        <cylinder radius="0.0425" length="0.039" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link2_capsule_tube_cap_a">
+      <origin xyz="0 0.0485 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0425" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link2_capsule_tube_cap_b">
+      <origin xyz="0 0.0875 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0425" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_arm_joint3" type="revolute">
+    <origin xyz="0 0.264 0" rpy="-1.5708 0 0" />
+    <parent link="left_arm_link2" />
+    <child link="left_arm_link3" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.0194" upper="3.0194" effort="18" velocity="3.1416" />
+  </joint>
+
+  <link name="left_arm_link3">
+    <inertial>
+      <origin xyz="0.00796684 -0.00357354 -0.0495339" rpy="0 0 0" />
+      <mass value="1.4705935" />
+      <inertia ixx="0.00478397785" ixy="-3.33061245e-05" ixz="0.000617091319" iyy="0.0050711962" iyz="-0.000190636286" izz="0.0012149391" />
+    </inertial>
+    <visual>
+      <origin xyz="0.018 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 -0.04825" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0425" length="0.0965" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 -0.0965" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0425" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0425" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <collision name="left_arm_link3_capsule_housing_j4">
+      <origin xyz="0.018 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link3_capsule_tube">
+      <origin xyz="0 0 -0.04825" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0425" length="0.0965" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link3_capsule_tube_cap_a">
+      <origin xyz="0 0 -0.0965" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0425" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link3_capsule_tube_cap_b">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0425" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_arm_joint4" type="revolute">
+    <origin xyz="0.018 0 0" rpy="-1.5708 0 3.1416" />
+    <parent link="left_arm_link3" />
+    <child link="left_arm_link4" />
+    <axis xyz="0 0 1" />
+    <limit lower="-2.5307" upper="0.7854" effort="18" velocity="3.1416" />
+  </joint>
+
+  <link name="left_arm_link4">
+    <inertial>
+      <origin xyz="0.00840183 -0.038565 -0.0073627" rpy="0 0 0" />
+      <mass value="1.18165575" />
+      <inertia ixx="0.003518106" ixy="-0.000439663616" ixz="8.05268076e-05" iyy="0.00136252224" iyz="-0.000370796799" izz="0.00333721674" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0485" length="0.0118" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 -0.0059" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.0059" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.0004 -0.0533 0" rpy="1.48766 1.5708 0" />
+      <geometry>
+        <cylinder radius="0.0465" length="0.00963328" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 -0.0485 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0465" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.0008 -0.0581 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0465" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <collision name="left_arm_link4_capsule_housing_j4">
+      <origin xyz="0 0 0" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0485" length="0.0118" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link4_capsule_housing_j4_cap_a">
+      <origin xyz="0 0 -0.0059" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link4_capsule_housing_j4_cap_b">
+      <origin xyz="0 0 0.0059" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link4_capsule_tube">
+      <origin xyz="0.0004 -0.0533 0" rpy="1.48766 1.5708 0" />
+      <geometry>
+        <cylinder radius="0.0465" length="0.00963328" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link4_capsule_tube_cap_a">
+      <origin xyz="0 -0.0485 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0465" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link4_capsule_tube_cap_b">
+      <origin xyz="0.0008 -0.0581 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0465" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_arm_joint5" type="revolute">
+    <origin xyz="0.018 -0.264 0" rpy="-1.5708 0 3.1416" />
+    <parent link="left_arm_link4" />
+    <child link="left_arm_link5" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.0194" upper="3.0194" effort="5.5" velocity="3.1416" />
+  </joint>
+
+  <link name="left_arm_link5">
+    <inertial>
+      <origin xyz="5.008e-04 -2.23923e-03 -9.253416e-02" rpy="0 0 0" />
+      <mass value="1.13921635" />
+      <inertia ixx="0.00247156494" ixy="-1.30036219e-05" ixz="7.60632176e-06" iyy="0.00222189996" iyz="-3.48319435e-05" izz="0.000959011424" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 -0.0743" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0482" length="0.0932" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 -0.1209" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0482" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 -0.0277" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0482" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <collision name="left_arm_link5_capsule_tube">
+      <origin xyz="0 0 -0.0743" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0482" length="0.0932" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link5_capsule_tube_cap_a">
+      <origin xyz="0 0 -0.1209" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0482" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link5_capsule_tube_cap_b">
+      <origin xyz="0 0 -0.0277" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0482" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_arm_joint6" type="revolute">
+    <origin xyz="0 0 0" rpy="1.5708 -1.5708 0" />
+    <parent link="left_arm_link5" />
+    <child link="left_arm_link6" />
+    <axis xyz="0 0 1" />
+    <limit lower="-1.0472" upper="1.0472" effort="5.5" velocity="3.1416" />
+  </joint>
+
+  <link name="left_arm_link6">
+    <inertial>
+      <origin xyz="-1.8634e-04 2.3824e-04 5.829e-04" rpy="0 0 0" />
+      <mass value="0.444790938" />
+      <inertia ixx="0.000227085142" ixy="-1.34363169e-06" ixz="-3.41601277e-07" iyy="0.00019543009" iyz="4.01950835e-06" izz="0.00021141703" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0.0045 0" rpy="1.5708 0 0" />
+      <geometry>
+        <cylinder radius="0.0313" length="0.0014" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0.0052 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0313" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0.0038 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0313" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <collision name="left_arm_link6_capsule_tube">
+      <origin xyz="0 0.0045 0" rpy="1.5708 0 0" />
+      <geometry>
+        <cylinder radius="0.0313" length="0.0014" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link6_capsule_tube_cap_a">
+      <origin xyz="0 0.0052 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0313" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link6_capsule_tube_cap_b">
+      <origin xyz="0 0.0038 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0313" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_arm_joint7" type="revolute">
+    <origin xyz="0 0 0" rpy="1.5708 -1.5708 0" />
+    <parent link="left_arm_link6" />
+    <child link="left_arm_link7" />
+    <axis xyz="0 0 1" />
+    <limit lower="-1.5708" upper="1.5708" effort="5.5" velocity="3.1416" />
+  </joint>
+
+  <link name="left_arm_link7">
+    <inertial>
+      <origin xyz="-5.2431e-04 -3.976234e-02 7.27342e-03" rpy="0 0 0" />
+      <mass value="0.432000361" />
+      <inertia ixx="0.000800576752" ixy="6.7978654e-06" ixz="8.31229773e-07" iyy="0.000345757425" iyz="0.00014539689" izz="0.000669914263" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.0286 0" rpy="1.5708 0 0" />
+      <geometry>
+        <cylinder radius="0.0345" length="0.0478" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 -0.0047 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0345" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 -0.0525 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0345" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <collision name="left_arm_link7_capsule_tube">
+      <origin xyz="0 -0.0286 0" rpy="1.5708 0 0" />
+      <geometry>
+        <cylinder radius="0.0345" length="0.0478" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link7_capsule_tube_cap_a">
+      <origin xyz="0 -0.0047 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0345" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_link7_capsule_tube_cap_b">
+      <origin xyz="0 -0.0525 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0345" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_arm_flange_joint" type="fixed">
+    <origin xyz="0 -0.087 0" rpy="1.5708 -1.5708 0" />
+    <parent link="left_arm_link7" />
+    <child link="left_arm_flange" />
+  </joint>
+
+  <link name="left_arm_flange">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0" />
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.0095 0.0275" rpy="0.33262 0 0" />
+      <geometry>
+        <cylinder radius="0.03" length="0.0581893" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.03" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 -0.019 0.055" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.03" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <collision name="left_arm_flange_capsule">
+      <origin xyz="0 -0.0095 0.0275" rpy="0.33262 0 0" />
+      <geometry>
+        <cylinder radius="0.03" length="0.0581893" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_flange_capsule_cap_a">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.03" />
+      </geometry>
+    </collision>
+    <collision name="left_arm_flange_capsule_cap_b">
+      <origin xyz="0 -0.019 0.055" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.03" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- right arm: d1/arm_7dof -->
+
+  <joint name="right_arm_attach_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="arm_mount_right" />
+    <child link="right_arm_base" />
+  </joint>
+
+  <link name="right_arm_base">
+    <inertial>
+      <origin xyz="1.1648e-04 -9.321e-05 3.390668e-02" rpy="0 0 0" />
+      <mass value="0.973941905" />
+      <inertia ixx="0.000745715587" ixy="-1.70800638e-07" ixz="8.7677661e-06" iyy="0.000762123835" iyz="2.28872855e-06" izz="0.000922152646" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.0793" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0566" length="0.1586" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0566" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.1586" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0566" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <collision name="right_arm_base_capsule_tube">
+      <origin xyz="0 0 0.0793" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0566" length="0.1586" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_base_capsule_tube_cap_a">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0566" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_base_capsule_tube_cap_b">
+      <origin xyz="0 0 0.1586" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0566" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_arm_joint1" type="revolute">
+    <origin xyz="0 0 0.1586" rpy="0 0 0" />
+    <parent link="right_arm_base" />
+    <child link="right_arm_link1" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.0194" upper="3.0194" effort="35" velocity="3.1416" />
+  </joint>
+
+  <link name="right_arm_link1">
+    <inertial>
+      <origin xyz="-3.3175e-04 -4.26687e-03 -3.522466e-02" rpy="0 0 0" />
+      <mass value="1.75076461" />
+      <inertia ixx="0.00417794303" ixy="2.01544753e-06" ixz="1.52809638e-05" iyy="0.004492387" iyz="-0.000266870304" izz="0.00150047222" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 -0.033" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0556" length="0.088" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 -0.077" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0556" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.011" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0556" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <collision name="right_arm_link1_capsule_tube">
+      <origin xyz="0 0 -0.033" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0556" length="0.088" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link1_capsule_tube_cap_a">
+      <origin xyz="0 0 -0.077" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0556" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link1_capsule_tube_cap_b">
+      <origin xyz="0 0 0.011" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0556" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_arm_joint2" type="revolute">
+    <origin xyz="0 0 0" rpy="1.5708 0 0" />
+    <parent link="right_arm_link1" />
+    <child link="right_arm_link2" />
+    <axis xyz="0 0 1" />
+    <limit lower="-2.0595" upper="2.0595" effort="35" velocity="3.1416" />
+  </joint>
+
+  <link name="right_arm_link2">
+    <inertial>
+      <origin xyz="2.044e-05 0.0535881 -0.00881535" rpy="0 0 0" />
+      <mass value="1.80703659" />
+      <inertia ixx="0.00741823609" ixy="9.66731613e-06" ixz="1.3550184e-06" iyy="0.00212396287" iyz="0.000864581444" izz="0.00698174937" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0485" length="0.0188" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 -0.0094" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.0094" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0.068 0" rpy="-1.5708 0 0" />
+      <geometry>
+        <cylinder radius="0.0425" length="0.039" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0.0485 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0425" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0.0875 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0425" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <collision name="right_arm_link2_capsule_housing_j2">
+      <origin xyz="0 0 0" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0485" length="0.0188" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link2_capsule_housing_j2_cap_a">
+      <origin xyz="0 0 -0.0094" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link2_capsule_housing_j2_cap_b">
+      <origin xyz="0 0 0.0094" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link2_capsule_tube">
+      <origin xyz="0 0.068 0" rpy="-1.5708 0 0" />
+      <geometry>
+        <cylinder radius="0.0425" length="0.039" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link2_capsule_tube_cap_a">
+      <origin xyz="0 0.0485 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0425" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link2_capsule_tube_cap_b">
+      <origin xyz="0 0.0875 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0425" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_arm_joint3" type="revolute">
+    <origin xyz="0 0.264 0" rpy="-1.5708 0 0" />
+    <parent link="right_arm_link2" />
+    <child link="right_arm_link3" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.0194" upper="3.0194" effort="18" velocity="3.1416" />
+  </joint>
+
+  <link name="right_arm_link3">
+    <inertial>
+      <origin xyz="0.00796684 -0.00357354 -0.0495339" rpy="0 0 0" />
+      <mass value="1.4705935" />
+      <inertia ixx="0.00478397785" ixy="-3.33061245e-05" ixz="0.000617091319" iyy="0.0050711962" iyz="-0.000190636286" izz="0.0012149391" />
+    </inertial>
+    <visual>
+      <origin xyz="0.018 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 -0.04825" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0425" length="0.0965" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 -0.0965" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0425" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0425" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <collision name="right_arm_link3_capsule_housing_j4">
+      <origin xyz="0.018 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link3_capsule_tube">
+      <origin xyz="0 0 -0.04825" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0425" length="0.0965" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link3_capsule_tube_cap_a">
+      <origin xyz="0 0 -0.0965" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0425" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link3_capsule_tube_cap_b">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0425" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_arm_joint4" type="revolute">
+    <origin xyz="0.018 0 0" rpy="-1.5708 0 3.1416" />
+    <parent link="right_arm_link3" />
+    <child link="right_arm_link4" />
+    <axis xyz="0 0 1" />
+    <limit lower="-2.5307" upper="0.7854" effort="18" velocity="3.1416" />
+  </joint>
+
+  <link name="right_arm_link4">
+    <inertial>
+      <origin xyz="0.00840183 -0.038565 -0.0073627" rpy="0 0 0" />
+      <mass value="1.18165575" />
+      <inertia ixx="0.003518106" ixy="-0.000439663616" ixz="8.05268076e-05" iyy="0.00136252224" iyz="-0.000370796799" izz="0.00333721674" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0485" length="0.0118" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 -0.0059" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.0059" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.0004 -0.0533 0" rpy="1.48766 1.5708 0" />
+      <geometry>
+        <cylinder radius="0.0465" length="0.00963328" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 -0.0485 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0465" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.0008 -0.0581 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0465" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <collision name="right_arm_link4_capsule_housing_j4">
+      <origin xyz="0 0 0" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0485" length="0.0118" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link4_capsule_housing_j4_cap_a">
+      <origin xyz="0 0 -0.0059" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link4_capsule_housing_j4_cap_b">
+      <origin xyz="0 0 0.0059" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0485" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link4_capsule_tube">
+      <origin xyz="0.0004 -0.0533 0" rpy="1.48766 1.5708 0" />
+      <geometry>
+        <cylinder radius="0.0465" length="0.00963328" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link4_capsule_tube_cap_a">
+      <origin xyz="0 -0.0485 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0465" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link4_capsule_tube_cap_b">
+      <origin xyz="0.0008 -0.0581 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0465" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_arm_joint5" type="revolute">
+    <origin xyz="0.018 -0.264 0" rpy="-1.5708 0 3.1416" />
+    <parent link="right_arm_link4" />
+    <child link="right_arm_link5" />
+    <axis xyz="0 0 1" />
+    <limit lower="-3.0194" upper="3.0194" effort="5.5" velocity="3.1416" />
+  </joint>
+
+  <link name="right_arm_link5">
+    <inertial>
+      <origin xyz="-5.008e-04 2.23923e-03 -9.253416e-02" rpy="0 0 0" />
+      <mass value="1.13921635" />
+      <inertia ixx="0.00247156494" ixy="-1.30036219e-05" ixz="-7.60632176e-06" iyy="0.00222189996" iyz="3.48319435e-05" izz="0.000959011424" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 -0.0743" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0482" length="0.0932" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 -0.1209" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0482" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 -0.0277" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0482" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <collision name="right_arm_link5_capsule_tube">
+      <origin xyz="0 0 -0.0743" rpy="-0 0 0" />
+      <geometry>
+        <cylinder radius="0.0482" length="0.0932" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link5_capsule_tube_cap_a">
+      <origin xyz="0 0 -0.1209" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0482" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link5_capsule_tube_cap_b">
+      <origin xyz="0 0 -0.0277" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0482" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_arm_joint6" type="revolute">
+    <origin xyz="0 0 0" rpy="1.5708 -1.5708 0" />
+    <parent link="right_arm_link5" />
+    <child link="right_arm_link6" />
+    <axis xyz="0 0 1" />
+    <limit lower="-1.0472" upper="1.0472" effort="5.5" velocity="3.1416" />
+  </joint>
+
+  <link name="right_arm_link6">
+    <inertial>
+      <origin xyz="1.8634e-04 2.3824e-04 -5.829e-04" rpy="0 0 0" />
+      <mass value="0.444790938" />
+      <inertia ixx="0.000227085142" ixy="1.34363169e-06" ixz="-3.41601277e-07" iyy="0.00019543009" iyz="-4.01950835e-06" izz="0.00021141703" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0.0045 0" rpy="1.5708 0 0" />
+      <geometry>
+        <cylinder radius="0.0313" length="0.0014" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0.0052 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0313" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0.0038 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0313" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <collision name="right_arm_link6_capsule_tube">
+      <origin xyz="0 0.0045 0" rpy="1.5708 0 0" />
+      <geometry>
+        <cylinder radius="0.0313" length="0.0014" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link6_capsule_tube_cap_a">
+      <origin xyz="0 0.0052 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0313" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link6_capsule_tube_cap_b">
+      <origin xyz="0 0.0038 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0313" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_arm_joint7" type="revolute">
+    <origin xyz="0 0 0" rpy="1.5708 -1.5708 0" />
+    <parent link="right_arm_link6" />
+    <child link="right_arm_link7" />
+    <axis xyz="0 0 1" />
+    <limit lower="-1.5708" upper="1.5708" effort="5.5" velocity="3.1416" />
+  </joint>
+
+  <link name="right_arm_link7">
+    <inertial>
+      <origin xyz="-5.2431e-04 -3.976234e-02 7.27342e-03" rpy="0 0 0" />
+      <mass value="0.432000361" />
+      <inertia ixx="0.000800576752" ixy="6.7978654e-06" ixz="8.31229773e-07" iyy="0.000345757425" iyz="0.00014539689" izz="0.000669914263" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.0286 0" rpy="1.5708 0 0" />
+      <geometry>
+        <cylinder radius="0.0345" length="0.0478" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 -0.0047 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0345" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 -0.0525 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0345" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <collision name="right_arm_link7_capsule_tube">
+      <origin xyz="0 -0.0286 0" rpy="1.5708 0 0" />
+      <geometry>
+        <cylinder radius="0.0345" length="0.0478" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link7_capsule_tube_cap_a">
+      <origin xyz="0 -0.0047 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0345" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_link7_capsule_tube_cap_b">
+      <origin xyz="0 -0.0525 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.0345" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_arm_flange_joint" type="fixed">
+    <origin xyz="0 -0.087 0" rpy="1.5708 -1.5708 0" />
+    <parent link="right_arm_link7" />
+    <child link="right_arm_flange" />
+  </joint>
+
+  <link name="right_arm_flange">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0" />
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.0095 0.0275" rpy="0.33262 0 0" />
+      <geometry>
+        <cylinder radius="0.03" length="0.0581893" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.03" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 -0.019 0.055" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.03" />
+      </geometry>
+      <material name="d1_arm_shell">
+        <color rgba="0.90 0.91 0.92 1" />
+      </material>
+    </visual>
+    <collision name="right_arm_flange_capsule">
+      <origin xyz="0 -0.0095 0.0275" rpy="0.33262 0 0" />
+      <geometry>
+        <cylinder radius="0.03" length="0.0581893" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_flange_capsule_cap_a">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.03" />
+      </geometry>
+    </collision>
+    <collision name="right_arm_flange_capsule_cap_b">
+      <origin xyz="0 -0.019 0.055" rpy="0 0 0" />
+      <geometry>
+        <sphere radius="0.03" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- left end effector: d1/gripper_default -->
+
+  <joint name="left_ee_attach_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 3.14159" />
+    <parent link="left_arm_flange" />
+    <child link="left_ee_base" />
+  </joint>
+
+  <link name="left_ee_base">
+    <!-- housing: weighed gripper minus the estimated jaws and linkage bars (build.py) -->
+    <inertial>
+      <origin xyz="-1.14887e-05 0.000312055 0.0313025" rpy="0 0 0" />
+      <mass value="0.618" />
+      <inertia ixx="0.000431034" ixy="-1.90345e-07" ixz="3.13506e-07" iyy="0.000470365" iyz="-1.20565e-06" izz="0.000570745" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.0005 0.0045" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0904 0.097 0.009" />
+      </geometry>
+      <material name="gripper_default_housing">
+        <color rgba="0.55 0.57 0.60 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0.0045 0.027" rpy="0 0 0" />
+      <geometry>
+        <box size="0.078 0.087 0.036" />
+      </geometry>
+      <material name="gripper_default_housing">
+        <color rgba="0.55 0.57 0.60 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.0525" rpy="0 0 0" />
+      <geometry>
+        <box size="0.1062 0.0666 0.015" />
+      </geometry>
+      <material name="gripper_default_housing">
+        <color rgba="0.55 0.57 0.60 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.0725" rpy="0 0 0" />
+      <geometry>
+        <box size="0.1064 0.034 0.025" />
+      </geometry>
+      <material name="gripper_default_housing">
+        <color rgba="0.55 0.57 0.60 1" />
+      </material>
+    </visual>
+    <!-- gripper housing (STEP) -->
+    <collision name="left_ee_body_plate">
+      <origin xyz="0 -0.0005 0.0045" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0904 0.097 0.009" />
+      </geometry>
+    </collision>
+    <!-- gripper housing (STEP) -->
+    <collision name="left_ee_neck">
+      <origin xyz="0 0.0045 0.027" rpy="0 0 0" />
+      <geometry>
+        <box size="0.078 0.087 0.036" />
+      </geometry>
+    </collision>
+    <!-- gripper housing (STEP) -->
+    <collision name="left_ee_head_low">
+      <origin xyz="0 0 0.0525" rpy="0 0 0" />
+      <geometry>
+        <box size="0.1062 0.0666 0.015" />
+      </geometry>
+    </collision>
+    <!-- gripper housing (STEP) -->
+    <collision name="left_ee_head_high">
+      <origin xyz="0 0 0.0725" rpy="0 0 0" />
+      <geometry>
+        <box size="0.1064 0.034 0.025" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_ee_jaw_r_joint" type="prismatic">
+    <origin xyz="0.05 0 0.15433" rpy="0 0 0" />
+    <parent link="left_ee_base" />
+    <child link="left_ee_jaw_r_drive_link" />
+    <axis xyz="-0.992476 0 0.122442" />
+    <limit lower="0" upper="0.0503791" effort="100" velocity="0.168" />
+  </joint>
+
+  <link name="left_ee_jaw_r_drive_link">
+    <!-- the jaw coordinate; the finger rides the linkage (jaw_r_finger_joint) -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.001" />
+      <inertia ixx="1e-08" ixy="0" ixz="0" iyy="1e-08" iyz="0" izz="1e-08" />
+    </inertial>
+  </link>
+
+  <joint name="left_ee_inner_bar_r_joint" type="revolute">
+    <origin xyz="0.0225 0 0.0653" rpy="0 0 0" />
+    <parent link="left_ee_base" />
+    <child link="left_ee_inner_bar_r_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-0.685015" upper="0" effort="100" velocity="2.28433" />
+    <mimic joint="left_ee_jaw_r_joint" multiplier="-13.597223" offset="0" />
+  </joint>
+
+  <link name="left_ee_inner_bar_r_link">
+    <!-- linkage bar, mass estimated (build.py) -->
+    <inertial>
+      <origin xyz="0.016825 0 0.033515" rpy="0 0 0" />
+      <mass value="0.02" />
+      <inertia ixx="8.31651e-06" ixy="0" ixz="-3.7165e-06" iyy="9.48224e-06" iyz="0" izz="2.77907e-06" />
+    </inertial>
+    <visual>
+      <origin xyz="0.0186191 0 0.0370888" rpy="0 0.465258 0" />
+      <geometry>
+        <box size="0.008 0.022 0.031" />
+      </geometry>
+      <material name="gripper_default_link">
+        <color rgba="0.70 0.72 0.75 1" />
+      </material>
+    </visual>
+    <!-- bar span clear of the housing and the jaw over the stroke -->
+    <collision name="left_ee_inner_bar_r">
+      <origin xyz="0.0186191 0 0.0370888" rpy="0 0.465258 0" />
+      <geometry>
+        <box size="0.008 0.022 0.031" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_ee_outer_bar_r_joint" type="revolute">
+    <origin xyz="0.04035 0 0.0588" rpy="0 0 0" />
+    <parent link="left_ee_base" />
+    <child link="left_ee_outer_bar_r_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-0.685015" upper="0" effort="100" velocity="2.28433" />
+    <mimic joint="left_ee_jaw_r_joint" multiplier="-13.597223" offset="0" />
+  </joint>
+
+  <link name="left_ee_outer_bar_r_link">
+    <!-- linkage bar, mass estimated (build.py) -->
+    <inertial>
+      <origin xyz="0.016825 0 0.033515" rpy="0 0 0" />
+      <mass value="0.03" />
+      <inertia ixx="1.24748e-05" ixy="0" ixz="-5.57474e-06" iyy="1.42234e-05" iyz="0" izz="4.1686e-06" />
+    </inertial>
+    <visual>
+      <origin xyz="0.0210867 0 0.0420042" rpy="0 0.465258 0" />
+      <geometry>
+        <box size="0.008 0.022 0.034" />
+      </geometry>
+      <material name="gripper_default_link">
+        <color rgba="0.70 0.72 0.75 1" />
+      </material>
+    </visual>
+    <!-- bar span clear of the housing and the jaw over the stroke -->
+    <collision name="left_ee_outer_bar_r">
+      <origin xyz="0.0210867 0 0.0420042" rpy="0 0.465258 0" />
+      <geometry>
+        <box size="0.008 0.022 0.034" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_ee_jaw_r_finger_joint" type="revolute">
+    <origin xyz="0.03365 0 0.06703" rpy="0 0 0" />
+    <parent link="left_ee_inner_bar_r_link" />
+    <child link="left_ee_jaw_r_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="0" upper="0.685015" effort="100" velocity="2.28433" />
+    <mimic joint="left_ee_jaw_r_joint" multiplier="13.597223" offset="0" />
+  </joint>
+
+  <link name="left_ee_jaw_r_link">
+    <!-- finger + pad + carrier (estimate) -->
+    <inertial>
+      <origin xyz="0.00514 0 0.013" rpy="0 0 0" />
+      <mass value="0.04" />
+      <inertia ixx="7.936e-06" ixy="1.396e-10" ixz="1.755e-06" iyy="8.594e-06" iyz="5.245e-12" izz="3.173e-06" />
+    </inertial>
+    <visual>
+      <origin xyz="0.00285 0 0.02203" rpy="0 0 0" />
+      <geometry>
+        <box size="0.018 0.021 0.034" />
+      </geometry>
+      <material name="gripper_default_jaw">
+        <color rgba="0.20 0.20 0.22 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.0091 0 -0.003345" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0272 0.021 0.01675" />
+      </geometry>
+      <material name="gripper_default_jaw">
+        <color rgba="0.20 0.20 0.22 1" />
+      </material>
+    </visual>
+    <!-- gripper finger (STEP) -->
+    <collision name="left_ee_jaw_r_finger">
+      <origin xyz="0.00285 0 0.02203" rpy="0 0 0" />
+      <geometry>
+        <box size="0.018 0.021 0.034" />
+      </geometry>
+    </collision>
+    <!-- gripper finger (STEP) -->
+    <collision name="left_ee_jaw_r_carrier">
+      <origin xyz="0.0091 0 -0.003345" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0272 0.021 0.01675" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_ee_jaw_l_joint" type="prismatic">
+    <origin xyz="-0.05 0 0.15433" rpy="0 0 0" />
+    <parent link="left_ee_base" />
+    <child link="left_ee_jaw_l_drive_link" />
+    <axis xyz="-0.992476 0 -0.122442" />
+    <limit lower="-0.0503791" upper="0" effort="100" velocity="0.168" />
+  </joint>
+
+  <link name="left_ee_jaw_l_drive_link">
+    <!-- the jaw coordinate; the finger rides the linkage (jaw_l_finger_joint) -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.001" />
+      <inertia ixx="1e-08" ixy="0" ixz="0" iyy="1e-08" iyz="0" izz="1e-08" />
+    </inertial>
+  </link>
+
+  <joint name="left_ee_inner_bar_l_joint" type="revolute">
+    <origin xyz="-0.0225 0 0.0653" rpy="0 0 0" />
+    <parent link="left_ee_base" />
+    <child link="left_ee_inner_bar_l_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="0" upper="0.685015" effort="100" velocity="2.28433" />
+    <mimic joint="left_ee_jaw_l_joint" multiplier="-13.597223" offset="0" />
+  </joint>
+
+  <link name="left_ee_inner_bar_l_link">
+    <!-- linkage bar, mass estimated (build.py) -->
+    <inertial>
+      <origin xyz="-0.016825 0 0.033515" rpy="0 0 0" />
+      <mass value="0.02" />
+      <inertia ixx="8.31651e-06" ixy="0" ixz="3.7165e-06" iyy="9.48224e-06" iyz="0" izz="2.77907e-06" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.0186191 0 0.0370888" rpy="0 -0.465258 0" />
+      <geometry>
+        <box size="0.008 0.022 0.031" />
+      </geometry>
+      <material name="gripper_default_link">
+        <color rgba="0.70 0.72 0.75 1" />
+      </material>
+    </visual>
+    <!-- bar span clear of the housing and the jaw over the stroke -->
+    <collision name="left_ee_inner_bar_l">
+      <origin xyz="-0.0186191 0 0.0370888" rpy="0 -0.465258 0" />
+      <geometry>
+        <box size="0.008 0.022 0.031" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_ee_outer_bar_l_joint" type="revolute">
+    <origin xyz="-0.04035 0 0.0588" rpy="0 0 0" />
+    <parent link="left_ee_base" />
+    <child link="left_ee_outer_bar_l_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="0" upper="0.685015" effort="100" velocity="2.28433" />
+    <mimic joint="left_ee_jaw_l_joint" multiplier="-13.597223" offset="0" />
+  </joint>
+
+  <link name="left_ee_outer_bar_l_link">
+    <!-- linkage bar, mass estimated (build.py) -->
+    <inertial>
+      <origin xyz="-0.016825 0 0.033515" rpy="0 0 0" />
+      <mass value="0.03" />
+      <inertia ixx="1.24748e-05" ixy="0" ixz="5.57474e-06" iyy="1.42234e-05" iyz="0" izz="4.1686e-06" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.0210867 0 0.0420042" rpy="0 -0.465258 0" />
+      <geometry>
+        <box size="0.008 0.022 0.034" />
+      </geometry>
+      <material name="gripper_default_link">
+        <color rgba="0.70 0.72 0.75 1" />
+      </material>
+    </visual>
+    <!-- bar span clear of the housing and the jaw over the stroke -->
+    <collision name="left_ee_outer_bar_l">
+      <origin xyz="-0.0210867 0 0.0420042" rpy="0 -0.465258 0" />
+      <geometry>
+        <box size="0.008 0.022 0.034" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_ee_jaw_l_finger_joint" type="revolute">
+    <origin xyz="-0.03365 0 0.06703" rpy="0 0 0" />
+    <parent link="left_ee_inner_bar_l_link" />
+    <child link="left_ee_jaw_l_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-0.685015" upper="0" effort="100" velocity="2.28433" />
+    <mimic joint="left_ee_jaw_l_joint" multiplier="13.597223" offset="0" />
+  </joint>
+
+  <link name="left_ee_jaw_l_link">
+    <!-- finger + pad + carrier (estimate) -->
+    <inertial>
+      <origin xyz="-0.00514 0 0.013" rpy="0 0 0" />
+      <mass value="0.04" />
+      <inertia ixx="7.936e-06" ixy="1.396e-10" ixz="-1.755e-06" iyy="8.594e-06" iyz="-5.245e-12" izz="3.173e-06" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.00285 0 0.02203" rpy="0 0 0" />
+      <geometry>
+        <box size="0.018 0.021 0.034" />
+      </geometry>
+      <material name="gripper_default_jaw">
+        <color rgba="0.20 0.20 0.22 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.0091 0 -0.003345" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0272 0.021 0.01675" />
+      </geometry>
+      <material name="gripper_default_jaw">
+        <color rgba="0.20 0.20 0.22 1" />
+      </material>
+    </visual>
+    <!-- gripper finger (STEP) -->
+    <collision name="left_ee_jaw_l_finger">
+      <origin xyz="-0.00285 0 0.02203" rpy="0 0 0" />
+      <geometry>
+        <box size="0.018 0.021 0.034" />
+      </geometry>
+    </collision>
+    <!-- gripper finger (STEP) -->
+    <collision name="left_ee_jaw_l_carrier">
+      <origin xyz="-0.0091 0 -0.003345" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0272 0.021 0.01675" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_ee_camera_plate_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="left_ee_base" />
+    <child link="left_ee_camera_plate_link" />
+  </joint>
+
+  <link name="left_ee_camera_plate_link">
+    <!-- hand adapter 0.100 kg + camera plate 0.040 kg, weighed 2026-10-28; tensor from the CAD solids -->
+    <inertial>
+      <origin xyz="3e-05 0.0219328571 0.00253714286" rpy="0 0 0" />
+      <mass value="0.14" />
+      <inertia ixx="0.00024374" ixy="8.82e-08" ixz="-1.3465e-07" iyy="5.95564e-05" iyz="-8.27005e-06" izz="0.000301528" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0.0005 0.0009" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0904 0.097 0.0054" />
+      </geometry>
+      <material name="gripper_camera_plate">
+        <color rgba="0.75 0.75 0.78 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0.0725 0.00665" rpy="0 0 0" />
+      <geometry>
+        <box size="0.042 0.047 0.0133" />
+      </geometry>
+      <material name="gripper_camera_plate">
+        <color rgba="0.75 0.75 0.78 1" />
+      </material>
+    </visual>
+    <!-- interface plate: 98 mm disc with flats, 1.8 mm spigot into the flange -->
+    <collision name="left_ee_camera_plate_disc">
+      <origin xyz="0 0.0005 0.0009" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0904 0.097 0.0054" />
+      </geometry>
+    </collision>
+    <!-- camera arm with the 10 deg camera bracket (drawing frame: gripper -y; mounted half a turn about the approach axis, on +y) -->
+    <collision name="left_ee_camera_plate_arm">
+      <origin xyz="0 0.0725 0.00665" rpy="0 0 0" />
+      <geometry>
+        <box size="0.042 0.047 0.0133" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_ee_tcp_joint" type="fixed">
+    <origin xyz="0 0 0.1605" rpy="0 0 0" />
+    <parent link="left_ee_base" />
+    <child link="left_ee_tcp" />
+  </joint>
+
+  <link name="left_ee_tcp">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <joint name="left_ee_jaw_r_pad_joint" type="fixed">
+    <origin xyz="-0.00615 0 0.022" rpy="0 0 0" />
+    <parent link="left_ee_jaw_r_link" />
+    <child link="left_ee_jaw_r_pad" />
+  </joint>
+
+  <link name="left_ee_jaw_r_pad">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <joint name="left_ee_jaw_l_pad_joint" type="fixed">
+    <origin xyz="0.00615 0 0.022" rpy="0 0 0" />
+    <parent link="left_ee_jaw_l_link" />
+    <child link="left_ee_jaw_l_pad" />
+  </joint>
+
+  <link name="left_ee_jaw_l_pad">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <joint name="left_ee_wrist_camera_mount_joint" type="fixed">
+    <origin xyz="0 0.07452 0.00964" rpy="-1.5708 -1.39626 -1.5708" />
+    <parent link="left_ee_camera_plate_link" />
+    <child link="left_ee_wrist_camera_mount" />
+  </joint>
+
+  <link name="left_ee_wrist_camera_mount">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <!-- right end effector: d1/gripper_default -->
+
+  <joint name="right_ee_attach_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="right_arm_flange" />
+    <child link="right_ee_base" />
+  </joint>
+
+  <link name="right_ee_base">
+    <!-- housing: weighed gripper minus the estimated jaws and linkage bars (build.py) -->
+    <inertial>
+      <origin xyz="-1.14887e-05 0.000312055 0.0313025" rpy="0 0 0" />
+      <mass value="0.618" />
+      <inertia ixx="0.000431034" ixy="-1.90345e-07" ixz="3.13506e-07" iyy="0.000470365" iyz="-1.20565e-06" izz="0.000570745" />
+    </inertial>
+    <visual>
+      <origin xyz="0 -0.0005 0.0045" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0904 0.097 0.009" />
+      </geometry>
+      <material name="gripper_default_housing">
+        <color rgba="0.55 0.57 0.60 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0.0045 0.027" rpy="0 0 0" />
+      <geometry>
+        <box size="0.078 0.087 0.036" />
+      </geometry>
+      <material name="gripper_default_housing">
+        <color rgba="0.55 0.57 0.60 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.0525" rpy="0 0 0" />
+      <geometry>
+        <box size="0.1062 0.0666 0.015" />
+      </geometry>
+      <material name="gripper_default_housing">
+        <color rgba="0.55 0.57 0.60 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0 0.0725" rpy="0 0 0" />
+      <geometry>
+        <box size="0.1064 0.034 0.025" />
+      </geometry>
+      <material name="gripper_default_housing">
+        <color rgba="0.55 0.57 0.60 1" />
+      </material>
+    </visual>
+    <!-- gripper housing (STEP) -->
+    <collision name="right_ee_body_plate">
+      <origin xyz="0 -0.0005 0.0045" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0904 0.097 0.009" />
+      </geometry>
+    </collision>
+    <!-- gripper housing (STEP) -->
+    <collision name="right_ee_neck">
+      <origin xyz="0 0.0045 0.027" rpy="0 0 0" />
+      <geometry>
+        <box size="0.078 0.087 0.036" />
+      </geometry>
+    </collision>
+    <!-- gripper housing (STEP) -->
+    <collision name="right_ee_head_low">
+      <origin xyz="0 0 0.0525" rpy="0 0 0" />
+      <geometry>
+        <box size="0.1062 0.0666 0.015" />
+      </geometry>
+    </collision>
+    <!-- gripper housing (STEP) -->
+    <collision name="right_ee_head_high">
+      <origin xyz="0 0 0.0725" rpy="0 0 0" />
+      <geometry>
+        <box size="0.1064 0.034 0.025" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_ee_jaw_r_joint" type="prismatic">
+    <origin xyz="0.05 0 0.15433" rpy="0 0 0" />
+    <parent link="right_ee_base" />
+    <child link="right_ee_jaw_r_drive_link" />
+    <axis xyz="-0.992476 0 0.122442" />
+    <limit lower="0" upper="0.0503791" effort="100" velocity="0.168" />
+  </joint>
+
+  <link name="right_ee_jaw_r_drive_link">
+    <!-- the jaw coordinate; the finger rides the linkage (jaw_r_finger_joint) -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.001" />
+      <inertia ixx="1e-08" ixy="0" ixz="0" iyy="1e-08" iyz="0" izz="1e-08" />
+    </inertial>
+  </link>
+
+  <joint name="right_ee_inner_bar_r_joint" type="revolute">
+    <origin xyz="0.0225 0 0.0653" rpy="0 0 0" />
+    <parent link="right_ee_base" />
+    <child link="right_ee_inner_bar_r_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-0.685015" upper="0" effort="100" velocity="2.28433" />
+    <mimic joint="right_ee_jaw_r_joint" multiplier="-13.597223" offset="0" />
+  </joint>
+
+  <link name="right_ee_inner_bar_r_link">
+    <!-- linkage bar, mass estimated (build.py) -->
+    <inertial>
+      <origin xyz="0.016825 0 0.033515" rpy="0 0 0" />
+      <mass value="0.02" />
+      <inertia ixx="8.31651e-06" ixy="0" ixz="-3.7165e-06" iyy="9.48224e-06" iyz="0" izz="2.77907e-06" />
+    </inertial>
+    <visual>
+      <origin xyz="0.0186191 0 0.0370888" rpy="0 0.465258 0" />
+      <geometry>
+        <box size="0.008 0.022 0.031" />
+      </geometry>
+      <material name="gripper_default_link">
+        <color rgba="0.70 0.72 0.75 1" />
+      </material>
+    </visual>
+    <!-- bar span clear of the housing and the jaw over the stroke -->
+    <collision name="right_ee_inner_bar_r">
+      <origin xyz="0.0186191 0 0.0370888" rpy="0 0.465258 0" />
+      <geometry>
+        <box size="0.008 0.022 0.031" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_ee_outer_bar_r_joint" type="revolute">
+    <origin xyz="0.04035 0 0.0588" rpy="0 0 0" />
+    <parent link="right_ee_base" />
+    <child link="right_ee_outer_bar_r_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-0.685015" upper="0" effort="100" velocity="2.28433" />
+    <mimic joint="right_ee_jaw_r_joint" multiplier="-13.597223" offset="0" />
+  </joint>
+
+  <link name="right_ee_outer_bar_r_link">
+    <!-- linkage bar, mass estimated (build.py) -->
+    <inertial>
+      <origin xyz="0.016825 0 0.033515" rpy="0 0 0" />
+      <mass value="0.03" />
+      <inertia ixx="1.24748e-05" ixy="0" ixz="-5.57474e-06" iyy="1.42234e-05" iyz="0" izz="4.1686e-06" />
+    </inertial>
+    <visual>
+      <origin xyz="0.0210867 0 0.0420042" rpy="0 0.465258 0" />
+      <geometry>
+        <box size="0.008 0.022 0.034" />
+      </geometry>
+      <material name="gripper_default_link">
+        <color rgba="0.70 0.72 0.75 1" />
+      </material>
+    </visual>
+    <!-- bar span clear of the housing and the jaw over the stroke -->
+    <collision name="right_ee_outer_bar_r">
+      <origin xyz="0.0210867 0 0.0420042" rpy="0 0.465258 0" />
+      <geometry>
+        <box size="0.008 0.022 0.034" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_ee_jaw_r_finger_joint" type="revolute">
+    <origin xyz="0.03365 0 0.06703" rpy="0 0 0" />
+    <parent link="right_ee_inner_bar_r_link" />
+    <child link="right_ee_jaw_r_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="0" upper="0.685015" effort="100" velocity="2.28433" />
+    <mimic joint="right_ee_jaw_r_joint" multiplier="13.597223" offset="0" />
+  </joint>
+
+  <link name="right_ee_jaw_r_link">
+    <!-- finger + pad + carrier (estimate) -->
+    <inertial>
+      <origin xyz="0.00514 0 0.013" rpy="0 0 0" />
+      <mass value="0.04" />
+      <inertia ixx="7.936e-06" ixy="1.396e-10" ixz="1.755e-06" iyy="8.594e-06" iyz="5.245e-12" izz="3.173e-06" />
+    </inertial>
+    <visual>
+      <origin xyz="0.00285 0 0.02203" rpy="0 0 0" />
+      <geometry>
+        <box size="0.018 0.021 0.034" />
+      </geometry>
+      <material name="gripper_default_jaw">
+        <color rgba="0.20 0.20 0.22 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0.0091 0 -0.003345" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0272 0.021 0.01675" />
+      </geometry>
+      <material name="gripper_default_jaw">
+        <color rgba="0.20 0.20 0.22 1" />
+      </material>
+    </visual>
+    <!-- gripper finger (STEP) -->
+    <collision name="right_ee_jaw_r_finger">
+      <origin xyz="0.00285 0 0.02203" rpy="0 0 0" />
+      <geometry>
+        <box size="0.018 0.021 0.034" />
+      </geometry>
+    </collision>
+    <!-- gripper finger (STEP) -->
+    <collision name="right_ee_jaw_r_carrier">
+      <origin xyz="0.0091 0 -0.003345" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0272 0.021 0.01675" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_ee_jaw_l_joint" type="prismatic">
+    <origin xyz="-0.05 0 0.15433" rpy="0 0 0" />
+    <parent link="right_ee_base" />
+    <child link="right_ee_jaw_l_drive_link" />
+    <axis xyz="-0.992476 0 -0.122442" />
+    <limit lower="-0.0503791" upper="0" effort="100" velocity="0.168" />
+  </joint>
+
+  <link name="right_ee_jaw_l_drive_link">
+    <!-- the jaw coordinate; the finger rides the linkage (jaw_l_finger_joint) -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="0.001" />
+      <inertia ixx="1e-08" ixy="0" ixz="0" iyy="1e-08" iyz="0" izz="1e-08" />
+    </inertial>
+  </link>
+
+  <joint name="right_ee_inner_bar_l_joint" type="revolute">
+    <origin xyz="-0.0225 0 0.0653" rpy="0 0 0" />
+    <parent link="right_ee_base" />
+    <child link="right_ee_inner_bar_l_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="0" upper="0.685015" effort="100" velocity="2.28433" />
+    <mimic joint="right_ee_jaw_l_joint" multiplier="-13.597223" offset="0" />
+  </joint>
+
+  <link name="right_ee_inner_bar_l_link">
+    <!-- linkage bar, mass estimated (build.py) -->
+    <inertial>
+      <origin xyz="-0.016825 0 0.033515" rpy="0 0 0" />
+      <mass value="0.02" />
+      <inertia ixx="8.31651e-06" ixy="0" ixz="3.7165e-06" iyy="9.48224e-06" iyz="0" izz="2.77907e-06" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.0186191 0 0.0370888" rpy="0 -0.465258 0" />
+      <geometry>
+        <box size="0.008 0.022 0.031" />
+      </geometry>
+      <material name="gripper_default_link">
+        <color rgba="0.70 0.72 0.75 1" />
+      </material>
+    </visual>
+    <!-- bar span clear of the housing and the jaw over the stroke -->
+    <collision name="right_ee_inner_bar_l">
+      <origin xyz="-0.0186191 0 0.0370888" rpy="0 -0.465258 0" />
+      <geometry>
+        <box size="0.008 0.022 0.031" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_ee_outer_bar_l_joint" type="revolute">
+    <origin xyz="-0.04035 0 0.0588" rpy="0 0 0" />
+    <parent link="right_ee_base" />
+    <child link="right_ee_outer_bar_l_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="0" upper="0.685015" effort="100" velocity="2.28433" />
+    <mimic joint="right_ee_jaw_l_joint" multiplier="-13.597223" offset="0" />
+  </joint>
+
+  <link name="right_ee_outer_bar_l_link">
+    <!-- linkage bar, mass estimated (build.py) -->
+    <inertial>
+      <origin xyz="-0.016825 0 0.033515" rpy="0 0 0" />
+      <mass value="0.03" />
+      <inertia ixx="1.24748e-05" ixy="0" ixz="5.57474e-06" iyy="1.42234e-05" iyz="0" izz="4.1686e-06" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.0210867 0 0.0420042" rpy="0 -0.465258 0" />
+      <geometry>
+        <box size="0.008 0.022 0.034" />
+      </geometry>
+      <material name="gripper_default_link">
+        <color rgba="0.70 0.72 0.75 1" />
+      </material>
+    </visual>
+    <!-- bar span clear of the housing and the jaw over the stroke -->
+    <collision name="right_ee_outer_bar_l">
+      <origin xyz="-0.0210867 0 0.0420042" rpy="0 -0.465258 0" />
+      <geometry>
+        <box size="0.008 0.022 0.034" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_ee_jaw_l_finger_joint" type="revolute">
+    <origin xyz="-0.03365 0 0.06703" rpy="0 0 0" />
+    <parent link="right_ee_inner_bar_l_link" />
+    <child link="right_ee_jaw_l_link" />
+    <axis xyz="0 1 0" />
+    <limit lower="-0.685015" upper="0" effort="100" velocity="2.28433" />
+    <mimic joint="right_ee_jaw_l_joint" multiplier="13.597223" offset="0" />
+  </joint>
+
+  <link name="right_ee_jaw_l_link">
+    <!-- finger + pad + carrier (estimate) -->
+    <inertial>
+      <origin xyz="-0.00514 0 0.013" rpy="0 0 0" />
+      <mass value="0.04" />
+      <inertia ixx="7.936e-06" ixy="1.396e-10" ixz="-1.755e-06" iyy="8.594e-06" iyz="-5.245e-12" izz="3.173e-06" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.00285 0 0.02203" rpy="0 0 0" />
+      <geometry>
+        <box size="0.018 0.021 0.034" />
+      </geometry>
+      <material name="gripper_default_jaw">
+        <color rgba="0.20 0.20 0.22 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="-0.0091 0 -0.003345" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0272 0.021 0.01675" />
+      </geometry>
+      <material name="gripper_default_jaw">
+        <color rgba="0.20 0.20 0.22 1" />
+      </material>
+    </visual>
+    <!-- gripper finger (STEP) -->
+    <collision name="right_ee_jaw_l_finger">
+      <origin xyz="-0.00285 0 0.02203" rpy="0 0 0" />
+      <geometry>
+        <box size="0.018 0.021 0.034" />
+      </geometry>
+    </collision>
+    <!-- gripper finger (STEP) -->
+    <collision name="right_ee_jaw_l_carrier">
+      <origin xyz="-0.0091 0 -0.003345" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0272 0.021 0.01675" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_ee_camera_plate_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="right_ee_base" />
+    <child link="right_ee_camera_plate_link" />
+  </joint>
+
+  <link name="right_ee_camera_plate_link">
+    <!-- hand adapter 0.100 kg + camera plate 0.040 kg, weighed 2026-10-28; tensor from the CAD solids -->
+    <inertial>
+      <origin xyz="3e-05 0.0219328571 0.00253714286" rpy="0 0 0" />
+      <mass value="0.14" />
+      <inertia ixx="0.00024374" ixy="8.82e-08" ixz="-1.3465e-07" iyy="5.95564e-05" iyz="-8.27005e-06" izz="0.000301528" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0.0005 0.0009" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0904 0.097 0.0054" />
+      </geometry>
+      <material name="gripper_camera_plate">
+        <color rgba="0.75 0.75 0.78 1" />
+      </material>
+    </visual>
+    <visual>
+      <origin xyz="0 0.0725 0.00665" rpy="0 0 0" />
+      <geometry>
+        <box size="0.042 0.047 0.0133" />
+      </geometry>
+      <material name="gripper_camera_plate">
+        <color rgba="0.75 0.75 0.78 1" />
+      </material>
+    </visual>
+    <!-- interface plate: 98 mm disc with flats, 1.8 mm spigot into the flange -->
+    <collision name="right_ee_camera_plate_disc">
+      <origin xyz="0 0.0005 0.0009" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0904 0.097 0.0054" />
+      </geometry>
+    </collision>
+    <!-- camera arm with the 10 deg camera bracket (drawing frame: gripper -y; mounted half a turn about the approach axis, on +y) -->
+    <collision name="right_ee_camera_plate_arm">
+      <origin xyz="0 0.0725 0.00665" rpy="0 0 0" />
+      <geometry>
+        <box size="0.042 0.047 0.0133" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_ee_tcp_joint" type="fixed">
+    <origin xyz="0 0 0.1605" rpy="0 0 0" />
+    <parent link="right_ee_base" />
+    <child link="right_ee_tcp" />
+  </joint>
+
+  <link name="right_ee_tcp">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <joint name="right_ee_jaw_r_pad_joint" type="fixed">
+    <origin xyz="-0.00615 0 0.022" rpy="0 0 0" />
+    <parent link="right_ee_jaw_r_link" />
+    <child link="right_ee_jaw_r_pad" />
+  </joint>
+
+  <link name="right_ee_jaw_r_pad">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <joint name="right_ee_jaw_l_pad_joint" type="fixed">
+    <origin xyz="0.00615 0 0.022" rpy="0 0 0" />
+    <parent link="right_ee_jaw_l_link" />
+    <child link="right_ee_jaw_l_pad" />
+  </joint>
+
+  <link name="right_ee_jaw_l_pad">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <joint name="right_ee_wrist_camera_mount_joint" type="fixed">
+    <origin xyz="0 0.07452 0.00964" rpy="-1.5708 -1.39626 -1.5708" />
+    <parent link="right_ee_camera_plate_link" />
+    <child link="right_ee_wrist_camera_mount" />
+  </joint>
+
+  <link name="right_ee_wrist_camera_mount">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <!-- head camera: intel/realsense_d435 -->
+
+  <joint name="head_camera_attach_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="head_camera_mount" />
+    <child link="head_camera_link" />
+  </joint>
+
+  <link name="head_camera_link">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+         physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <joint name="head_camera_color_optical_frame_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 1.5708 0" />
+    <parent link="head_camera_link" />
+    <child link="head_camera_color_optical_frame" />
+  </joint>
+
+  <link name="head_camera_color_optical_frame">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <!-- chest camera: d1/torso_fisheye -->
+
+  <joint name="chest_camera_attach_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="chest_camera_mount" />
+    <child link="chest_camera_link" />
+  </joint>
+
+  <link name="chest_camera_link">
+    <!-- mass not weighed and not modelled: 1e-6 kg exists only so a
+         physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.0094 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0188 0.038 0.038" />
+      </geometry>
+      <material name="torso_fisheye">
+        <color rgba="0.15 0.15 0.15 1" />
+      </material>
+    </visual>
+    <!-- module and lens ring envelope, 2026-10-30 body CAD -->
+    <collision name="chest_camera_housing">
+      <origin xyz="-0.0094 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0188 0.038 0.038" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="chest_camera_color_optical_frame_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 1.5708 0" />
+    <parent link="chest_camera_link" />
+    <child link="chest_camera_color_optical_frame" />
+  </joint>
+
+  <link name="chest_camera_color_optical_frame">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <!-- back camera: d1/torso_fisheye -->
+
+  <joint name="back_camera_attach_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="back_camera_mount" />
+    <child link="back_camera_link" />
+  </joint>
+
+  <link name="back_camera_link">
+    <!-- mass not weighed and not modelled: 1e-6 kg exists only so a
+         physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+    <visual>
+      <origin xyz="-0.0094 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0188 0.038 0.038" />
+      </geometry>
+      <material name="torso_fisheye">
+        <color rgba="0.15 0.15 0.15 1" />
+      </material>
+    </visual>
+    <!-- module and lens ring envelope, 2026-10-30 body CAD -->
+    <collision name="back_camera_housing">
+      <origin xyz="-0.0094 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.0188 0.038 0.038" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="back_camera_color_optical_frame_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 1.5708 0" />
+    <parent link="back_camera_link" />
+    <child link="back_camera_color_optical_frame" />
+  </joint>
+
+  <link name="back_camera_color_optical_frame">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <!-- left_wrist camera: orbbec/gemini_305 -->
+
+  <joint name="left_wrist_camera_attach_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="left_ee_wrist_camera_mount" />
+    <child link="left_wrist_camera_link" />
+  </joint>
+
+  <link name="left_wrist_camera_link">
+    <!-- Orbbec Gemini 305 with its cable, weighed 2026-10-28; uniform-box tensor -->
+    <inertial>
+      <origin xyz="0.0115 0 0" rpy="0 0 0" />
+      <mass value="0.104" />
+      <inertia ixx="3.0576e-05" ixy="0" ixz="0" iyy="1.98727e-05" iyz="0" izz="1.98727e-05" />
+    </inertial>
+    <visual>
+      <origin xyz="0.0115 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.023 0.042 0.042" />
+      </geometry>
+      <material name="gripper_wrist_camera">
+        <color rgba="0.15 0.15 0.15 1" />
+      </material>
+    </visual>
+    <!-- Orbbec Gemini 305 body, 42 x 42 x 23 mm (datasheet) -->
+    <collision name="left_wrist_camera_housing">
+      <origin xyz="0.0115 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.023 0.042 0.042" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="left_wrist_camera_color_optical_frame_joint" type="fixed">
+    <origin xyz="0.01905 0 0.009" rpy="0 1.5708 0" />
+    <parent link="left_wrist_camera_link" />
+    <child link="left_wrist_camera_color_optical_frame" />
+  </joint>
+
+  <link name="left_wrist_camera_color_optical_frame">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+
+  <!-- right_wrist camera: orbbec/gemini_305 -->
+
+  <joint name="right_wrist_camera_attach_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0" />
+    <parent link="right_ee_wrist_camera_mount" />
+    <child link="right_wrist_camera_link" />
+  </joint>
+
+  <link name="right_wrist_camera_link">
+    <!-- Orbbec Gemini 305 with its cable, weighed 2026-10-28; uniform-box tensor -->
+    <inertial>
+      <origin xyz="0.0115 0 0" rpy="0 0 0" />
+      <mass value="0.104" />
+      <inertia ixx="3.0576e-05" ixy="0" ixz="0" iyy="1.98727e-05" iyz="0" izz="1.98727e-05" />
+    </inertial>
+    <visual>
+      <origin xyz="0.0115 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.023 0.042 0.042" />
+      </geometry>
+      <material name="gripper_wrist_camera">
+        <color rgba="0.15 0.15 0.15 1" />
+      </material>
+    </visual>
+    <!-- Orbbec Gemini 305 body, 42 x 42 x 23 mm (datasheet) -->
+    <collision name="right_wrist_camera_housing">
+      <origin xyz="0.0115 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="0.023 0.042 0.042" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="right_wrist_camera_color_optical_frame_joint" type="fixed">
+    <origin xyz="0.01905 0 0.009" rpy="0 1.5708 0" />
+    <parent link="right_wrist_camera_link" />
+    <child link="right_wrist_camera_color_optical_frame" />
+  </joint>
+
+  <link name="right_wrist_camera_color_optical_frame">
+    <!-- a frame, not a body: 1e-6 kg exists only so a
+       physics importer does not substitute a default -->
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <mass value="1e-06" />
+      <inertia ixx="1e-09" ixy="0" ixz="0" iyy="1e-09" iyz="0" izz="1e-09" />
+    </inertial>
+  </link>
+</robot>

@@ -1,0 +1,29 @@
+id: core/touch_cube
+version: 1.0.0
+title: Touch the cube
+interfaces: [tools, code, chunks, scripted]
+instruction: >
+  Touch the top of the {cube_color} cube on the table with either gripper, then
+  pull the gripper back up at least 10 cm. Do not push the cube away.
+scene:
+  robot: {preset: d1, base: [0, 0, 0], lift: 0.10, neck: {pan: 0.0, tilt: 0.55}}
+  fixtures:
+    - {name: table, type: box, size: [0.60, 1.00, 0.75], pos: [0.63, 0.0, 0.375], color: wood, label: table}
+  objects:
+    - {name: cube, type: box, size: [0.04, 0.04, 0.04], pos: [0.42, 0.10, 0.77], mass: 0.05, color: gray, label: cube}
+  cameras:
+    showcase: {pos: [1.55, -1.25, 1.55], lookat: [0.45, 0.0, 0.85], fovy: 45}
+    top: {pos: [0.55, 0.0, 2.2], lookat: [0.55, 0.0, 0.75], fovy: 50}
+variation:
+  cube.xy: {uniform_box: [[0.38, -0.20], [0.46, 0.20]]}
+  cube.yaw_deg: {uniform: [-40, 40]}
+  cube.color: {choice: [gray, red, blue, green]}
+success:
+  all:
+    - {touched: [cube, any_hand]}
+    - {displaced_lt: [cube, 0.03]}
+    - {hands_clear_of: [cube, 0.10]}
+subgoals:
+  - {name: touched, pred: {touched: [cube, any_hand]}, weight: 0.6}
+  - {name: retreated, pred: {all: [{touched: [cube, any_hand]}, {hands_clear_of: [cube, 0.10]}]}, weight: 0.4}
+budget: {sim_seconds: 60, wall_seconds: 600, api_calls: 30, model_calls: 30, usd: 1.0}

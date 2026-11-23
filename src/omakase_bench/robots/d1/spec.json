@@ -1,0 +1,862 @@
+{
+  "schema": "manipulation_kit.robot_spec.v1",
+  "preset": "d1",
+  "summary": "D1, production configuration: body revision 2, 100 mm two-finger grippers, Gemini 305 wrist cameras",
+  "fixed_base": false,
+  "root": "world",
+  "model": "default",
+  "modules": [
+    {
+      "role": "base",
+      "kind": "base",
+      "id": "d1/amr",
+      "variant": null,
+      "sha256": "1559c7c41e17c03055d0f841a80151c29e70177fc41ba31e547ba3da4ed4a60b"
+    },
+    {
+      "role": "body",
+      "kind": "body",
+      "id": "d1/body",
+      "variant": "rev2",
+      "sha256": "908e2197ed992fc0f0ea887ef2d5dd712d212ecedafb4b5b3932c342368230bc"
+    },
+    {
+      "role": "left arm",
+      "kind": "arm",
+      "id": "d1/arm_7dof",
+      "variant": null,
+      "sha256": "5bfbde25aeca7313a048dc106f31ec4e66ffbd3853b4af5786cfe02291e4251f"
+    },
+    {
+      "role": "right arm",
+      "kind": "arm",
+      "id": "d1/arm_7dof",
+      "variant": null,
+      "sha256": "5bfbde25aeca7313a048dc106f31ec4e66ffbd3853b4af5786cfe02291e4251f"
+    },
+    {
+      "role": "left end effector",
+      "kind": "end_effector",
+      "id": "d1/gripper_default",
+      "variant": null,
+      "sha256": "3388df78f1daa2f00653e9a2d80c6c05b0b4a9a6a95dafff2e53b5a1ba67887c"
+    },
+    {
+      "role": "right end effector",
+      "kind": "end_effector",
+      "id": "d1/gripper_default",
+      "variant": null,
+      "sha256": "3388df78f1daa2f00653e9a2d80c6c05b0b4a9a6a95dafff2e53b5a1ba67887c"
+    },
+    {
+      "role": "head camera",
+      "kind": "camera",
+      "id": "intel/realsense_d435",
+      "variant": null,
+      "sha256": "50907eef2ba3734072a3a66e6e0ea5b06feb8a488fb1c1ef085d9ea563b11446"
+    },
+    {
+      "role": "chest camera",
+      "kind": "camera",
+      "id": "d1/torso_fisheye",
+      "variant": null,
+      "sha256": "04eba9271e40534fbba83263db9d4d04a9774d380afb2f6a1df324afa23d4bcc"
+    },
+    {
+      "role": "back camera",
+      "kind": "camera",
+      "id": "d1/torso_fisheye",
+      "variant": null,
+      "sha256": "04eba9271e40534fbba83263db9d4d04a9774d380afb2f6a1df324afa23d4bcc"
+    },
+    {
+      "role": "left_wrist camera",
+      "kind": "camera",
+      "id": "orbbec/gemini_305",
+      "variant": null,
+      "sha256": "922be944e3f798771f068a18cb204570a60d13852f8ead6a84989fb43c21add8"
+    },
+    {
+      "role": "right_wrist camera",
+      "kind": "camera",
+      "id": "orbbec/gemini_305",
+      "variant": null,
+      "sha256": "922be944e3f798771f068a18cb204570a60d13852f8ead6a84989fb43c21add8"
+    }
+  ],
+  "joints": [
+    {
+      "name": "base_x_joint",
+      "type": "prismatic",
+      "lower": -10.0,
+      "upper": 10.0,
+      "effort": 500.0,
+      "velocity": 1.5,
+      "group": "base"
+    },
+    {
+      "name": "base_y_joint",
+      "type": "prismatic",
+      "lower": -10.0,
+      "upper": 10.0,
+      "effort": 500.0,
+      "velocity": 1.5,
+      "group": "base"
+    },
+    {
+      "name": "base_yaw_joint",
+      "type": "continuous",
+      "lower": null,
+      "upper": null,
+      "effort": 500.0,
+      "velocity": 1.5,
+      "group": "base"
+    },
+    {
+      "name": "lift_joint",
+      "type": "prismatic",
+      "lower": 0.0,
+      "upper": 0.3,
+      "effort": 1000.0,
+      "velocity": 0.018,
+      "group": "lift"
+    },
+    {
+      "name": "neck_pan_joint",
+      "type": "revolute",
+      "lower": -1.57,
+      "upper": 1.57,
+      "effort": 3.0,
+      "velocity": 3.14,
+      "group": "neck"
+    },
+    {
+      "name": "neck_tilt_joint",
+      "type": "revolute",
+      "lower": -0.35,
+      "upper": 0.65,
+      "effort": 3.0,
+      "velocity": 3.14,
+      "group": "neck"
+    },
+    {
+      "name": "left_arm_joint1",
+      "type": "revolute",
+      "lower": -3.0194,
+      "upper": 3.0194,
+      "effort": 35.0,
+      "velocity": 3.1416,
+      "group": "left_arm"
+    },
+    {
+      "name": "left_arm_joint2",
+      "type": "revolute",
+      "lower": -2.0595,
+      "upper": 2.0595,
+      "effort": 35.0,
+      "velocity": 3.1416,
+      "group": "left_arm"
+    },
+    {
+      "name": "left_arm_joint3",
+      "type": "revolute",
+      "lower": -3.0194,
+      "upper": 3.0194,
+      "effort": 18.0,
+      "velocity": 3.1416,
+      "group": "left_arm"
+    },
+    {
+      "name": "left_arm_joint4",
+      "type": "revolute",
+      "lower": -2.5307,
+      "upper": 0.7854,
+      "effort": 18.0,
+      "velocity": 3.1416,
+      "group": "left_arm"
+    },
+    {
+      "name": "left_arm_joint5",
+      "type": "revolute",
+      "lower": -3.0194,
+      "upper": 3.0194,
+      "effort": 5.5,
+      "velocity": 3.1416,
+      "group": "left_arm"
+    },
+    {
+      "name": "left_arm_joint6",
+      "type": "revolute",
+      "lower": -1.0472,
+      "upper": 1.0472,
+      "effort": 5.5,
+      "velocity": 3.1416,
+      "group": "left_arm"
+    },
+    {
+      "name": "left_arm_joint7",
+      "type": "revolute",
+      "lower": -1.5708,
+      "upper": 1.5708,
+      "effort": 5.5,
+      "velocity": 3.1416,
+      "group": "left_arm"
+    },
+    {
+      "name": "right_arm_joint1",
+      "type": "revolute",
+      "lower": -3.0194,
+      "upper": 3.0194,
+      "effort": 35.0,
+      "velocity": 3.1416,
+      "group": "right_arm"
+    },
+    {
+      "name": "right_arm_joint2",
+      "type": "revolute",
+      "lower": -2.0595,
+      "upper": 2.0595,
+      "effort": 35.0,
+      "velocity": 3.1416,
+      "group": "right_arm"
+    },
+    {
+      "name": "right_arm_joint3",
+      "type": "revolute",
+      "lower": -3.0194,
+      "upper": 3.0194,
+      "effort": 18.0,
+      "velocity": 3.1416,
+      "group": "right_arm"
+    },
+    {
+      "name": "right_arm_joint4",
+      "type": "revolute",
+      "lower": -2.5307,
+      "upper": 0.7854,
+      "effort": 18.0,
+      "velocity": 3.1416,
+      "group": "right_arm"
+    },
+    {
+      "name": "right_arm_joint5",
+      "type": "revolute",
+      "lower": -3.0194,
+      "upper": 3.0194,
+      "effort": 5.5,
+      "velocity": 3.1416,
+      "group": "right_arm"
+    },
+    {
+      "name": "right_arm_joint6",
+      "type": "revolute",
+      "lower": -1.0472,
+      "upper": 1.0472,
+      "effort": 5.5,
+      "velocity": 3.1416,
+      "group": "right_arm"
+    },
+    {
+      "name": "right_arm_joint7",
+      "type": "revolute",
+      "lower": -1.5708,
+      "upper": 1.5708,
+      "effort": 5.5,
+      "velocity": 3.1416,
+      "group": "right_arm"
+    },
+    {
+      "name": "left_ee_jaw_r_joint",
+      "type": "prismatic",
+      "lower": 0.0,
+      "upper": 0.0503791,
+      "effort": 100.0,
+      "velocity": 0.168,
+      "group": "left_ee"
+    },
+    {
+      "name": "left_ee_jaw_l_joint",
+      "type": "prismatic",
+      "lower": -0.0503791,
+      "upper": 0.0,
+      "effort": 100.0,
+      "velocity": 0.168,
+      "group": "left_ee"
+    },
+    {
+      "name": "right_ee_jaw_r_joint",
+      "type": "prismatic",
+      "lower": 0.0,
+      "upper": 0.0503791,
+      "effort": 100.0,
+      "velocity": 0.168,
+      "group": "right_ee"
+    },
+    {
+      "name": "right_ee_jaw_l_joint",
+      "type": "prismatic",
+      "lower": -0.0503791,
+      "upper": 0.0,
+      "effort": 100.0,
+      "velocity": 0.168,
+      "group": "right_ee"
+    }
+  ],
+  "groups": {
+    "base": [
+      "base_x_joint",
+      "base_y_joint",
+      "base_yaw_joint"
+    ],
+    "lift": [
+      "lift_joint"
+    ],
+    "neck": [
+      "neck_pan_joint",
+      "neck_tilt_joint"
+    ],
+    "left_arm": [
+      "left_arm_joint1",
+      "left_arm_joint2",
+      "left_arm_joint3",
+      "left_arm_joint4",
+      "left_arm_joint5",
+      "left_arm_joint6",
+      "left_arm_joint7"
+    ],
+    "right_arm": [
+      "right_arm_joint1",
+      "right_arm_joint2",
+      "right_arm_joint3",
+      "right_arm_joint4",
+      "right_arm_joint5",
+      "right_arm_joint6",
+      "right_arm_joint7"
+    ],
+    "left_ee": [
+      "left_ee_jaw_r_joint",
+      "left_ee_jaw_l_joint"
+    ],
+    "right_ee": [
+      "right_ee_jaw_r_joint",
+      "right_ee_jaw_l_joint"
+    ]
+  },
+  "mimic_joints": [
+    {
+      "name": "left_ee_inner_bar_r_joint",
+      "type": "revolute",
+      "lower": -0.685015,
+      "upper": 0.0,
+      "effort": 100.0,
+      "velocity": 2.28433,
+      "group": "left_ee",
+      "joint": "left_ee_jaw_r_joint",
+      "multiplier": -13.597223,
+      "offset": 0.0
+    },
+    {
+      "name": "left_ee_outer_bar_r_joint",
+      "type": "revolute",
+      "lower": -0.685015,
+      "upper": 0.0,
+      "effort": 100.0,
+      "velocity": 2.28433,
+      "group": "left_ee",
+      "joint": "left_ee_jaw_r_joint",
+      "multiplier": -13.597223,
+      "offset": 0.0
+    },
+    {
+      "name": "left_ee_jaw_r_finger_joint",
+      "type": "revolute",
+      "lower": 0.0,
+      "upper": 0.685015,
+      "effort": 100.0,
+      "velocity": 2.28433,
+      "group": "left_ee",
+      "joint": "left_ee_jaw_r_joint",
+      "multiplier": 13.597223,
+      "offset": 0.0
+    },
+    {
+      "name": "left_ee_inner_bar_l_joint",
+      "type": "revolute",
+      "lower": 0.0,
+      "upper": 0.685015,
+      "effort": 100.0,
+      "velocity": 2.28433,
+      "group": "left_ee",
+      "joint": "left_ee_jaw_l_joint",
+      "multiplier": -13.597223,
+      "offset": 0.0
+    },
+    {
+      "name": "left_ee_outer_bar_l_joint",
+      "type": "revolute",
+      "lower": 0.0,
+      "upper": 0.685015,
+      "effort": 100.0,
+      "velocity": 2.28433,
+      "group": "left_ee",
+      "joint": "left_ee_jaw_l_joint",
+      "multiplier": -13.597223,
+      "offset": 0.0
+    },
+    {
+      "name": "left_ee_jaw_l_finger_joint",
+      "type": "revolute",
+      "lower": -0.685015,
+      "upper": 0.0,
+      "effort": 100.0,
+      "velocity": 2.28433,
+      "group": "left_ee",
+      "joint": "left_ee_jaw_l_joint",
+      "multiplier": 13.597223,
+      "offset": 0.0
+    },
+    {
+      "name": "right_ee_inner_bar_r_joint",
+      "type": "revolute",
+      "lower": -0.685015,
+      "upper": 0.0,
+      "effort": 100.0,
+      "velocity": 2.28433,
+      "group": "right_ee",
+      "joint": "right_ee_jaw_r_joint",
+      "multiplier": -13.597223,
+      "offset": 0.0
+    },
+    {
+      "name": "right_ee_outer_bar_r_joint",
+      "type": "revolute",
+      "lower": -0.685015,
+      "upper": 0.0,
+      "effort": 100.0,
+      "velocity": 2.28433,
+      "group": "right_ee",
+      "joint": "right_ee_jaw_r_joint",
+      "multiplier": -13.597223,
+      "offset": 0.0
+    },
+    {
+      "name": "right_ee_jaw_r_finger_joint",
+      "type": "revolute",
+      "lower": 0.0,
+      "upper": 0.685015,
+      "effort": 100.0,
+      "velocity": 2.28433,
+      "group": "right_ee",
+      "joint": "right_ee_jaw_r_joint",
+      "multiplier": 13.597223,
+      "offset": 0.0
+    },
+    {
+      "name": "right_ee_inner_bar_l_joint",
+      "type": "revolute",
+      "lower": 0.0,
+      "upper": 0.685015,
+      "effort": 100.0,
+      "velocity": 2.28433,
+      "group": "right_ee",
+      "joint": "right_ee_jaw_l_joint",
+      "multiplier": -13.597223,
+      "offset": 0.0
+    },
+    {
+      "name": "right_ee_outer_bar_l_joint",
+      "type": "revolute",
+      "lower": 0.0,
+      "upper": 0.685015,
+      "effort": 100.0,
+      "velocity": 2.28433,
+      "group": "right_ee",
+      "joint": "right_ee_jaw_l_joint",
+      "multiplier": -13.597223,
+      "offset": 0.0
+    },
+    {
+      "name": "right_ee_jaw_l_finger_joint",
+      "type": "revolute",
+      "lower": -0.685015,
+      "upper": 0.0,
+      "effort": 100.0,
+      "velocity": 2.28433,
+      "group": "right_ee",
+      "joint": "right_ee_jaw_l_joint",
+      "multiplier": 13.597223,
+      "offset": 0.0
+    }
+  ],
+  "end_effectors": {
+    "left": {
+      "id": "d1/gripper_default",
+      "tcp": "left_ee_tcp",
+      "jaws": {
+        "joints": [
+          "left_ee_jaw_r_joint",
+          "left_ee_jaw_l_joint"
+        ],
+        "type": "prismatic",
+        "open_q": [
+          0.0,
+          0.0
+        ],
+        "closed_q": [
+          0.0503791,
+          -0.0503791
+        ],
+        "effort": 100.0,
+        "velocity": 0.168
+      }
+    },
+    "right": {
+      "id": "d1/gripper_default",
+      "tcp": "right_ee_tcp",
+      "jaws": {
+        "joints": [
+          "right_ee_jaw_r_joint",
+          "right_ee_jaw_l_joint"
+        ],
+        "type": "prismatic",
+        "open_q": [
+          0.0,
+          0.0
+        ],
+        "closed_q": [
+          0.0503791,
+          -0.0503791
+        ],
+        "effort": 100.0,
+        "velocity": 0.168
+      }
+    }
+  },
+  "stand_in": null,
+  "cameras": {
+    "head": {
+      "id": "intel/realsense_d435",
+      "link": "head_camera_link",
+      "mount": "head_camera_mount",
+      "streamed": true,
+      "streams": {
+        "color": {
+          "optical_frame": "head_camera_color_optical_frame",
+          "lens": {
+            "schema": "manipulation_kit.lens.v1",
+            "camera": "Intel RealSense D435",
+            "stream": "colour, 640x480",
+            "nominal": true,
+            "model": "pinhole",
+            "width": 640,
+            "height": 480,
+            "fx": 607.1,
+            "fy": 607.2,
+            "cx": 325.4,
+            "cy": 252.7,
+            "distortion_model": "inverse_brown_conrady",
+            "distortion": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "provenance": {
+              "stream": "Colour 640x480 at 30 Hz is the mode the D1 streams; the robot's calibration service accepts only 640x480.",
+              "focal": "fx = 607.1 px, fy = 607.2 px: mean of the factory colour calibrations of two D1 head cameras at 640x480 (fx 607.72 and 606.54 px, fy 608.40 and 605.90 px, read with rs-enumerate-devices -c), a typical value for the camera model, not any one unit's calibration. Horizontal field of view 55.6 deg, vertical 43.1 deg.",
+              "principal_point": "cx = 325.4 px, cy = 252.7 px: mean of the same two factory calibrations (cx 324.95 and 325.76 px, cy 255.07 and 250.35 px).",
+              "distortion": "k1 k2 p1 p2 k3 of the inverse Brown-Conrady model, all zero: the D435 factory calibration reports the colour stream as undistorted.",
+              "per_unit": "A unit's own factory lens replaces these values: the robot's camera service reads it from the camera and the calibration service records it per robot. The values here are what a consumer uses when no per-unit calibration exists."
+            }
+          }
+        }
+      }
+    },
+    "chest": {
+      "id": "d1/torso_fisheye",
+      "link": "chest_camera_link",
+      "mount": "chest_camera_mount",
+      "streamed": false,
+      "streams": {
+        "color": {
+          "optical_frame": "chest_camera_color_optical_frame",
+          "lens": {
+            "schema": "manipulation_kit.lens.v1",
+            "camera": "D1 torso fisheye (USB UVC)",
+            "stream": "colour, 640x480",
+            "nominal": true,
+            "model": "pinhole",
+            "width": 640,
+            "height": 480,
+            "fx": 152.789,
+            "fy": 152.789,
+            "cx": 320.0,
+            "cy": 240.0,
+            "distortion_model": "kannala_brandt",
+            "distortion": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "provenance": {
+              "status": "PLACEHOLDER. Not a datasheet value and not a calibration: no lens data or calibration of this camera model exists yet. It makes the camera usable in simulation and must not be used where pixel accuracy matters.",
+              "stream": "YUYV 640x480 at 30 Hz, the mode the camera enumerates on the D1.",
+              "model": "ideal equidistant fisheye (kannala_brandt, k1..k4 = 0) with a 180 deg field whose image circle spans the 480 px image height: f = 240 px / (pi / 2) = 152.789 px, principal point at the image centre.",
+              "per_unit": "A calibration of the camera (cv2.fisheye, kannala_brandt) replaces these values; the robot's calibration file records it per robot."
+            }
+          }
+        }
+      }
+    },
+    "back": {
+      "id": "d1/torso_fisheye",
+      "link": "back_camera_link",
+      "mount": "back_camera_mount",
+      "streamed": false,
+      "streams": {
+        "color": {
+          "optical_frame": "back_camera_color_optical_frame",
+          "lens": {
+            "schema": "manipulation_kit.lens.v1",
+            "camera": "D1 torso fisheye (USB UVC)",
+            "stream": "colour, 640x480",
+            "nominal": true,
+            "model": "pinhole",
+            "width": 640,
+            "height": 480,
+            "fx": 152.789,
+            "fy": 152.789,
+            "cx": 320.0,
+            "cy": 240.0,
+            "distortion_model": "kannala_brandt",
+            "distortion": [
+              0.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            "provenance": {
+              "status": "PLACEHOLDER. Not a datasheet value and not a calibration: no lens data or calibration of this camera model exists yet. It makes the camera usable in simulation and must not be used where pixel accuracy matters.",
+              "stream": "YUYV 640x480 at 30 Hz, the mode the camera enumerates on the D1.",
+              "model": "ideal equidistant fisheye (kannala_brandt, k1..k4 = 0) with a 180 deg field whose image circle spans the 480 px image height: f = 240 px / (pi / 2) = 152.789 px, principal point at the image centre.",
+              "per_unit": "A calibration of the camera (cv2.fisheye, kannala_brandt) replaces these values; the robot's calibration file records it per robot."
+            }
+          }
+        }
+      }
+    },
+    "left_wrist": {
+      "id": "orbbec/gemini_305",
+      "link": "left_wrist_camera_link",
+      "mount": "left_ee_wrist_camera_mount",
+      "streamed": true,
+      "streams": {
+        "color": {
+          "optical_frame": "left_wrist_camera_color_optical_frame",
+          "lens": {
+            "schema": "manipulation_kit.lens.v1",
+            "camera": "Orbbec Gemini 305 (USB 2bc5:0840)",
+            "stream": "colour, 640x480",
+            "nominal": true,
+            "model": "pinhole",
+            "width": 640,
+            "height": 480,
+            "fx": 369.8,
+            "fy": 369.6,
+            "cx": 319.0,
+            "cy": 239.6,
+            "distortion_model": "brown_conrady_rational",
+            "distortion": [
+              -1.1298697,
+              0.63394988,
+              0.00015658,
+              0.00041061,
+              -0.10030815,
+              -1.1095551,
+              0.60702628,
+              -0.08976425
+            ],
+            "provenance": {
+              "stream": "Colour 640x480 at 30 Hz is the mode the D1 streams; the robot's calibration service accepts only 640x480.",
+              "focal": "fx = 369.8 px, fy = 369.6 px: representative factory calibration at 640x480, a typical value for the camera model, not any one unit's calibration.",
+              "principal_point": "cx = 319.0 px, cy = 239.6 px: representative factory calibration at 640x480.",
+              "distortion": "k1 k2 p1 p2 k3 k4 k5 k6 in OpenCV rational order: the colour calibration the Orbbec SDK reported (OB_DISTORTION_BROWN_CONRADY_K6) for one reference Gemini 305 unit, used as representative. Edge distortion -1.0 % (datasheet < 1.5 %).",
+              "per_unit": "A unit's own factory lens replaces these values: the robot's camera service reads it from the camera (color_intrinsics) and the calibration service records it per robot. The values here are what a consumer uses when no per-unit calibration exists."
+            }
+          }
+        }
+      }
+    },
+    "right_wrist": {
+      "id": "orbbec/gemini_305",
+      "link": "right_wrist_camera_link",
+      "mount": "right_ee_wrist_camera_mount",
+      "streamed": true,
+      "streams": {
+        "color": {
+          "optical_frame": "right_wrist_camera_color_optical_frame",
+          "lens": {
+            "schema": "manipulation_kit.lens.v1",
+            "camera": "Orbbec Gemini 305 (USB 2bc5:0840)",
+            "stream": "colour, 640x480",
+            "nominal": true,
+            "model": "pinhole",
+            "width": 640,
+            "height": 480,
+            "fx": 369.8,
+            "fy": 369.6,
+            "cx": 319.0,
+            "cy": 239.6,
+            "distortion_model": "brown_conrady_rational",
+            "distortion": [
+              -1.1298697,
+              0.63394988,
+              0.00015658,
+              0.00041061,
+              -0.10030815,
+              -1.1095551,
+              0.60702628,
+              -0.08976425
+            ],
+            "provenance": {
+              "stream": "Colour 640x480 at 30 Hz is the mode the D1 streams; the robot's calibration service accepts only 640x480.",
+              "focal": "fx = 369.8 px, fy = 369.6 px: representative factory calibration at 640x480, a typical value for the camera model, not any one unit's calibration.",
+              "principal_point": "cx = 319.0 px, cy = 239.6 px: representative factory calibration at 640x480.",
+              "distortion": "k1 k2 p1 p2 k3 k4 k5 k6 in OpenCV rational order: the colour calibration the Orbbec SDK reported (OB_DISTORTION_BROWN_CONRADY_K6) for one reference Gemini 305 unit, used as representative. Edge distortion -1.0 % (datasheet < 1.5 %).",
+              "per_unit": "A unit's own factory lens replaces these values: the robot's camera service reads it from the camera (color_intrinsics) and the calibration service records it per robot. The values here are what a consumer uses when no per-unit calibration exists."
+            }
+          }
+        }
+      }
+    }
+  },
+  "poses": {
+    "home": {
+      "left_arm_joint1": -0.9121090670922366,
+      "left_arm_joint2": 1.525068700392645,
+      "left_arm_joint3": 1.541125729510993,
+      "left_arm_joint4": -1.9952604008799175,
+      "left_arm_joint5": 1.5126768627034854,
+      "left_arm_joint6": -0.019198621771937627,
+      "left_arm_joint7": 0.22776546738526002,
+      "right_arm_joint1": 0.9121090670922366,
+      "right_arm_joint2": 1.525068700392645,
+      "right_arm_joint3": -1.541125729510993,
+      "right_arm_joint4": -1.9952604008799175,
+      "right_arm_joint5": -1.5126768627034854,
+      "right_arm_joint6": -0.019198621771937627,
+      "right_arm_joint7": -0.22776546738526002
+    },
+    "manipulation_home": {
+      "left_arm_joint1": -1.6006414570039995,
+      "left_arm_joint2": 0.4937536453891958,
+      "left_arm_joint3": 1.9629718097180224,
+      "left_arm_joint4": -1.7008233560684742,
+      "left_arm_joint5": 0.855036800552022,
+      "left_arm_joint6": -0.7515387759087584,
+      "left_arm_joint7": 0.20682151636132803,
+      "right_arm_joint1": 1.6006414570039995,
+      "right_arm_joint2": 0.4937536453891958,
+      "right_arm_joint3": -1.9629718097180224,
+      "right_arm_joint4": -1.7008233560684742,
+      "right_arm_joint5": -0.855036800552022,
+      "right_arm_joint6": -0.7515387759087584,
+      "right_arm_joint7": -0.20682151636132803
+    },
+    "stow": {
+      "left_arm_joint1": -0.7417649320975901,
+      "left_arm_joint2": 1.53588974175501,
+      "left_arm_joint3": 1.5707963267948966,
+      "left_arm_joint4": -1.4329153158873444,
+      "left_arm_joint5": 1.5585790220309363,
+      "left_arm_joint6": -0.024434609527920613,
+      "left_arm_joint7": 1.3962634015954636,
+      "right_arm_joint1": 0.7417649320975901,
+      "right_arm_joint2": 1.53588974175501,
+      "right_arm_joint3": -1.5707963267948966,
+      "right_arm_joint4": -1.4329153158873444,
+      "right_arm_joint5": -1.5585790220309363,
+      "right_arm_joint6": -0.024434609527920613,
+      "right_arm_joint7": -1.3962634015954636
+    }
+  },
+  "base": {
+    "drive": {
+      "kind": "differential",
+      "wheel_radius": 0.0853,
+      "track": 0.3067,
+      "max_linear_mps": 0.5,
+      "max_angular_rps": 0.6,
+      "provenance": "wheel radius and track (2 x 0.15335 m) from the body CAD; 0.5 m/s and 0.6 rad/s are the clamp values of the robot's control daemon. Differential drive is nonholonomic: command the base through (v, omega) only, which a URDF cannot express"
+    },
+    "footprint": [
+      [
+        0.3181,
+        0.2515
+      ],
+      [
+        -0.3273,
+        0.2515
+      ],
+      [
+        -0.3273,
+        -0.2455
+      ],
+      [
+        0.3181,
+        -0.2455
+      ]
+    ]
+  },
+  "coupled_limits": {},
+  "external_meshes": [
+    "description/d1/meshes/body/torso_fisheye.STL",
+    "description/d1/meshes/body_hifi/chassis_link_dark.obj",
+    "description/d1/meshes/body_hifi/chassis_link_gray.obj",
+    "description/d1/meshes/body_hifi/chassis_link_navy.obj",
+    "description/d1/meshes/body_hifi/chassis_link_silver.obj",
+    "description/d1/meshes/body_hifi/chassis_link_white.obj",
+    "description/d1/meshes/body_hifi/head_link_cyan.obj",
+    "description/d1/meshes/body_hifi/head_link_dark.obj",
+    "description/d1/meshes/body_hifi/head_link_navy.obj",
+    "description/d1/meshes/body_hifi/head_link_optic.obj",
+    "description/d1/meshes/body_hifi/head_link_red.obj",
+    "description/d1/meshes/body_hifi/head_link_silver.obj",
+    "description/d1/meshes/body_hifi/head_link_white.obj",
+    "description/d1/meshes/body_hifi/neck_pan_link_silver.obj",
+    "description/d1/meshes/body_hifi/torso_column_dark.obj",
+    "description/d1/meshes/body_hifi/torso_column_navy.obj",
+    "description/d1/meshes/body_hifi/torso_column_red.obj",
+    "description/d1/meshes/body_hifi/torso_column_silver.obj",
+    "description/d1/meshes/body_hifi/torso_column_white.obj",
+    "description/d1/meshes/gripper_default/base_link.STL",
+    "description/d1/meshes/gripper_default/camera_plate.STL",
+    "description/d1/meshes/gripper_default/gemini_305.STL",
+    "description/d1/meshes/gripper_default/inner_link_l.STL",
+    "description/d1/meshes/gripper_default/inner_link_r.STL",
+    "description/d1/meshes/gripper_default/jaw_l.STL",
+    "description/d1/meshes/gripper_default/jaw_r.STL",
+    "description/d1/meshes/gripper_default/outer_link_l.STL",
+    "description/d1/meshes/gripper_default/outer_link_r.STL",
+    "description/d1_arm/left/meshes/Base_L.STL",
+    "description/d1_arm/left/meshes/Link1_L.STL",
+    "description/d1_arm/left/meshes/Link2_L.STL",
+    "description/d1_arm/left/meshes/Link3_L.STL",
+    "description/d1_arm/left/meshes/Link4_L.STL",
+    "description/d1_arm/left/meshes/Link5_L.STL",
+    "description/d1_arm/left/meshes/Link6_L.STL",
+    "description/d1_arm/left/meshes/Link7_L.STL",
+    "description/d1_arm/left/meshes/TCP_Link_L.STL",
+    "description/d1_arm/right/meshes/Base_R.STL",
+    "description/d1_arm/right/meshes/Link1_R.STL",
+    "description/d1_arm/right/meshes/Link2_R.STL",
+    "description/d1_arm/right/meshes/Link3_R.STL",
+    "description/d1_arm/right/meshes/Link4_R.STL",
+    "description/d1_arm/right/meshes/Link5_R.STL",
+    "description/d1_arm/right/meshes/Link6_R.STL",
+    "description/d1_arm/right/meshes/Link7_R.STL",
+    "description/d1_arm/right/meshes/TCP_Link_R.STL"
+  ]
+}

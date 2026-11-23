@@ -1,0 +1,41 @@
+id: manip/sort
+version: 1.1.0
+title: Sort the cylinders by colour
+status: draft
+interfaces: [ee, scripted]
+instruction: "{goal}"
+scene:
+  robot: {preset: d1, base: [0, 0, 0], lift: 0.15, neck: {pan: 0.0, tilt: 0.65}}
+  fixtures:
+    - {name: table, type: box, size: [0.60, 1.00, 0.75], pos: [0.63, 0.0, 0.375], color: wood, label: table}
+    - {name: tray_red, type: tray, size: [0.15, 0.15, 0.04], pos: [0.41, 0.20, 0.77], color: white, wall: 0.008, label: tray}
+    - {name: tray_blue, type: tray, size: [0.15, 0.15, 0.04], pos: [0.41, -0.20, 0.77], color: white, wall: 0.008, label: tray}
+  cameras:
+    showcase: {pos: [1.20, -0.50, 1.38], lookat: [0.38, 0.0, 0.86], fovy: 45}
+    top: {pos: [0.45, 0.0, 1.9], lookat: [0.45, 0.0, 0.75], fovy: 40}
+generator: omakase_bench.tasks.manipulation.tabletop.generators:sort
+params:
+  trays: {red: tray_red, blue: tray_blue}
+  tray_wall: 0.008
+  max_objects: 3                # one object takes about 21 scripted steps at 45 mm per step
+  x: [0.35, 0.46]
+  y: [-0.03, 0.03]              # both arms reach the whole strip
+  separation: 0.05              # along x: the jaws open along y and their pads are 21 mm wide
+  radius: [0.015, 0.020]
+  height: [0.05, 0.065]
+  open_min: 0.06
+success: {goal: "omakase_bench.tasks.manipulation.tabletop.generators:sort_ok"}
+ee:
+  # what the task demands beyond the episode's goal sentence
+  rules: >-
+    Sort the cylinders by colour: pick up each one by pinching it between the fingertip pads and
+    release it inside the tray for its colour (cylinder resting in the tray). Both arms may be used,
+    also at the same time. Both grippers must be open at the end.
+  horizon: 72
+  # start: TCP x, y, z (m) and yaw (deg) each arm takes before the first step, gripper down, so
+  # that its wrist camera sees its half of the table
+  start: {left: [0.40, 0.17, 1.00, 0], right: [0.40, -0.17, 1.00, 0]}
+  start_path: staged         # leave the robot's home in stages (robot.yaml leave_home_first)
+  # names of the camera views in the tiled image, left to right
+  views: {left: left_wrist, head: head, right: right_wrist}
+budget: {sim_seconds: 120, wall_seconds: 3600, api_calls: 90, model_calls: 110, usd: 3.0}

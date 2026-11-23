@@ -1,0 +1,31 @@
+id: core/cube_to_tray
+version: 1.0.0
+title: Cube into the tray
+interfaces: [tools, code, chunks, scripted]
+instruction: Put the {cube_color} cube into the white tray.
+scene:
+  robot: {preset: d1, base: [0, 0, 0], lift: 0.10, neck: {pan: 0.0, tilt: 0.55}}
+  fixtures:
+    - {name: table, type: box, size: [0.60, 1.00, 0.75], pos: [0.63, 0.0, 0.375], color: wood, label: table}
+    - {name: tray, type: tray, size: [0.18, 0.18, 0.05], pos: [0.42, -0.03, 0.775], color: white, label: tray}
+  objects:
+    - {name: cube, type: box, size: [0.04, 0.04, 0.04], pos: [0.41, 0.21, 0.77], mass: 0.05, color: gray, label: cube}
+  cameras:
+    showcase: {pos: [1.55, -1.25, 1.55], lookat: [0.45, 0.0, 0.85], fovy: 45}
+    top: {pos: [0.55, 0.0, 2.2], lookat: [0.55, 0.0, 0.75], fovy: 50}
+variation:
+  cube.xy: {uniform_box: [[0.38, 0.18], [0.44, 0.24]]}
+  cube.yaw_deg: {uniform: [-40, 40]}
+  cube.color: {choice: [gray, red, blue, green]}
+  tray.xy: {uniform_box: [[0.40, -0.05], [0.44, -0.01]]}
+  tray.yaw_deg: {uniform: [-20, 20]}
+min_separation: {"cube|tray": 0.19}
+success:
+  all:
+    - {inside: [cube, tray]}
+    - {not_held: cube}
+subgoals:
+  - {name: grasped, pred: {held: cube}, weight: 0.3}
+  - {name: lifted, pred: {height_above: [cube, table, 0.03]}, weight: 0.2}
+  - {name: placed, pred: {all: [{inside: [cube, tray]}, {not_held: cube}]}, weight: 0.5}
+budget: {sim_seconds: 90, wall_seconds: 900, api_calls: 40, model_calls: 40, usd: 1.5}

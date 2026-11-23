@@ -1,0 +1,59 @@
+[project]
+name = "omakase-bench"
+version = "0.1.0"
+description = "Name a model, run robot tasks in simulation, get a scored report."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Omakase Robotics" }]
+requires-python = ">=3.11"
+keywords = ["robotics", "benchmark", "llm", "vla", "mujoco", "manipulation", "simulation"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "imageio>=2.38.2",
+    "imageio-ffmpeg>=0.8.1",
+    "mujoco>=4.0.1",
+    "numpy>=1.26",
+    "pillow>=10.1",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+anthropic = ["anthropic>=2.11.0"]
+openai = ["openai>=3.57.0"]
+real = [
+    "opencv-python-headless>=4.8",
+    "websockets>=13",
+]
+
+[project.urls]
+Homepage = "https://github.com/Omakase-Robotics-Org/omakase-bench"
+Repository = "https://github.com/Omakase-Robotics-Org/omakase-bench"
+Issues = "https://github.com/Omakase-Robotics-Org/omakase-bench/issues"
+Documentation = "https://github.com/Omakase-Robotics-Org/omakase-bench/tree/main/docs"
+
+[project.scripts]
+omakase-bench = "omakase_bench.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "websockets>=13",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--import-mode=importlib"

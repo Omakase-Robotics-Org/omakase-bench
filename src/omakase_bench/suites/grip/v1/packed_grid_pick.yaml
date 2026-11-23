@@ -1,0 +1,45 @@
+id: grip/packed_grid_pick
+version: 1.1.0
+title: Pick from a packed grid with a limited jaw opening
+status: draft
+interfaces: [ee, tools, code, scripted]
+instruction: "{goal}"
+scene:
+  robot: {preset: d1, base: [0, 0, 0], lift: 0.15, neck: {pan: 0.0, tilt: 0.65}}
+  fixtures:
+    - {name: table, type: box, size: [0.60, 1.00, 0.75], pos: [0.63, 0.0, 0.375], color: wood, label: table}
+  cameras:
+    showcase: {pos: [1.20, -0.50, 1.38], lookat: [0.38, 0.0, 0.86], fovy: 45}
+    top: {pos: [0.45, 0.0, 1.9], lookat: [0.45, 0.0, 0.75], fovy: 40}
+# Along y (the jaw axis at yaw 0) neighbours stand 60-64 mm apart. Fully open (100 mm) the
+# 18 mm pads reach 50..68 mm from the centre and land on a neighbour; opened to 44 mm they
+# reach 22..40 mm, clear of both the target (radius <= 16 mm) and the neighbours (>= 44 mm).
+generator: omakase_bench.tasks.manipulation.packed_grid.generators:packed_grid_pick
+params:
+  rows: 3                       # along x
+  cols: 3                       # along y
+  spacing_x: 0.045              # the pads are 21 mm wide along x
+  spacing_y: [0.060, 0.064]
+  radius: [0.015, 0.016]
+  height: [0.050, 0.065]
+  x: [0.40, 0.42]
+  y_abs: 0.17
+  colours: [red, blue, green, yellow, orange, purple]
+  others: gray
+  lift: 0.10
+  max_other_displacement: 0.010
+success: {goal: "omakase_bench.tasks.manipulation.tabletop.generators:clutter_pick_ok"}
+# Task-level end-effector limits, inside the robot preset's hardware range (robot.yaml).
+gripper:
+  max_opening_mm: 44
+  min_closing_mm: 0
+ee:
+  rules: >-
+    Pick the named cylinder out of a densely packed grid by pinching it between the fingertip pads
+    and lift it at least 100 mm. Do not move any other cylinder by more than 10 mm or tip it over.
+    Success as soon as the named cylinder is lifted that far.
+  horizon: 20
+  start: {left: [0.40, 0.17, 1.00, 0], right: [0.40, -0.17, 1.00, 0]}
+  start_path: staged         # leave the robot's home in stages (robot.yaml leave_home_first)
+  views: {left: left_wrist, head: head, right: right_wrist}
+budget: {sim_seconds: 60, wall_seconds: 1800, api_calls: 30, model_calls: 40, usd: 1.0}

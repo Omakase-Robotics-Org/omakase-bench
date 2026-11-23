@@ -1,0 +1,218 @@
+# D1 preset (production configuration: 100 mm two-finger grippers, D435 head
+# camera, Gemini 305 wrist cameras). d1.urdf and spec.json are the mesh-free
+# composition from manipulation-kit (see PROVENANCE.md); this file only names
+# the joint groups the harness drives.
+name: d1
+version: 1
+urdf: d1.urdf
+# Visual variants of the same kinematics and collision geometry. "mesh" (the
+# default) adds the D1 meshes under meshes/ (see assets.yaml); "primitive" is
+# the light, mesh-free description.
+visuals: {mesh: d1.meshes.urdf, primitive: d1.urdf}
+default_visual: mesh
+# Frame every model-facing coordinate is expressed in: x forward, y left, z up.
+base_link: base_footprint
+mobile_base:
+  # Two driven wheels (spec.json base.drive): the base moves along its heading
+  # and turns, never sideways. The planar x/y/yaw joints are driven along the
+  # unicycle path. "holonomic" is the alternative for omnidirectional bases.
+  drive: differential
+  joints: {x: base_x_joint, y: base_y_joint, yaw: base_yaw_joint}
+  max_speed: 0.5          # m/s, the robot daemon's clamp (spec.json base.drive)
+  max_yaw_rate: 0.6       # rad/s, same source
+  footprint: [[0.3181, 0.2515], [-0.3273, 0.2515], [-0.3273, -0.2455], [0.3181, -0.2455]]
+torso_lift:
+  joint: lift_joint
+  range: [0.0, 0.3]
+  speed: 0.018            # m/s, spec.json joint velocity
+neck:
+  pan: neck_pan_joint
+  tilt: neck_tilt_joint
+# Arm home: the robot's normal home pose (spec.json "home"), where every episode starts unless
+# its task names another pose (task YAML scene.robot.home).
+arms:
+  left:
+    joints: [left_arm_joint1, left_arm_joint2, left_arm_joint3, left_arm_joint4,
+             left_arm_joint5, left_arm_joint6, left_arm_joint7]
+    end_effector: left_gripper
+    home: home                # a named pose of spec.json, or seven numbers
+    max_joint_speed: 1.0      # rad/s, harness trajectory limit
+    # At home the jaws point forward just above the near table edge. Leaving home for a pose with
+    # the jaws down, the shoulder pitch moves first so the hand rises before the wrist turns (a
+    # single joint-space move takes the TCP 9 cm below its home height).
+    leave_home_first: [left_arm_joint2]
+    side: left
+    # joints 1 and 2 sit inside the shoulder: their links touch the torso by construction
+    self_collision_from: left_arm_joint3
+  right:
+    joints: [right_arm_joint1, right_arm_joint2, right_arm_joint3, right_arm_joint4,
+             right_arm_joint5, right_arm_joint6, right_arm_joint7]
+    end_effector: right_gripper
+    home: home
+    max_joint_speed: 1.0
+    leave_home_first: [right_arm_joint2]
+    side: right
+    self_collision_from: right_arm_joint3
+end_effectors:
+  left_gripper:
+    type: parallel_gripper
+    link: left_ee_base
+    tcp_link: left_ee_tcp
+    approach_axis: [0.0, 0.0, 1.0]   # in the TCP frame
+    fingers:
+      - {joint: left_ee_jaw_r_joint, open: 0.0, closed: 0.0503791}
+      - {joint: left_ee_jaw_l_joint, open: 0.0, closed: -0.0503791}
+    pad_links: [left_ee_jaw_r_link, left_ee_jaw_l_link]
+    max_opening: 0.100
+    force: 100.0
+    # Fingertip pads: the distal 34 mm of each jaw; a grasp is on the pads within 31 mm of the
+    # jaw tips (3 mm keep-out at the pad root). The fingertip centre lies past the TCP along
+    # the approach axis by 10.9 mm with the jaws open and 17.0 mm closed (measured in the
+    # model: the jaws swing on a four-bar linkage). yaw_zero_deg: end-effector rows count yaw
+    # from the wrist angle at which the wrist camera is on the far (+x) side of the gripper.
+    pad_length: 0.034
+    pad_band: 0.031
+    fingertip_offset: {open: 0.0109, closed: 0.0170}
+    yaw_zero_deg: 180.0
+    # the fingertip reach scripted programs plan with: fingertip_offset.open rounded to the millimetre,
+    # the value the scripted episodes of core@1 were published with
+    tip_reach: 0.011
+  right_gripper:
+    type: parallel_gripper
+    link: right_ee_base
+    tcp_link: right_ee_tcp
+    approach_axis: [0.0, 0.0, 1.0]
+    fingers:
+      - {joint: right_ee_jaw_r_joint, open: 0.0, closed: 0.0503791}
+      - {joint: right_ee_jaw_l_joint, open: 0.0, closed: -0.0503791}
+    pad_links: [right_ee_jaw_r_link, right_ee_jaw_l_link]
+    max_opening: 0.100
+    force: 100.0
+    pad_length: 0.034
+    pad_band: 0.031
+    fingertip_offset: {open: 0.0109, closed: 0.0170}
+    yaw_zero_deg: 180.0
+    tip_reach: 0.011
+cameras:
+  # vertical field of view from the nominal lens in spec.json: 2 atan(240 / fy)
+  # depth_range: nominal working range of the depth stream in metres along the optical axis
+  # (RealSense D435 in the head, Orbbec Gemini 305 on the wrists)
+  head: {link: head_camera_color_optical_frame, fovy: 43.1, width: 640, height: 480, depth_range: [0.28, 3.0], description: RealSense D435}
+  left_wrist: {link: left_wrist_camera_color_optical_frame, fovy: 66.0, width: 640, height: 480, depth_range: [0.04, 1.0], description: Orbbec Gemini 305}
+  right_wrist: {link: right_wrist_camera_color_optical_frame, fovy: 66.0, width: 640, height: 480, depth_range: [0.04, 1.0], description: Orbbec Gemini 305}
+# Named poses beside those of spec.json (home, stow, manipulation_home). A pose lists joint values
+# (rad) and may set the torso lift (m); tasks name poses for a robot's start and idle configuration.
+poses:
+  # Arms held out beside the torso, jaws down: TCP at x 0.15, y +-0.40, z 1.00 m in the base frame,
+  # ee yaw 180. A robot waiting for its turn holds it, clear of a table in front of it and of a second
+  # robot 0.74 m away reaching the far corner of a 360 mm board (at least 42 mm
+  # apart, measured in MuJoCo).
+  # On the branch of home and of the jaws-down pose (0.40, +-0.17, 1.00, yaw 180): moving there from
+  # home or on to that pose turns no joint by more than 105 deg, joints 2 and 5 by at most 85 deg.
+  side_idle:
+    lift: 0.20
+    joints:
+      left_arm_joint1: 0.2226
+      left_arm_joint2: 0.5214
+      left_arm_joint3: -0.292
+      left_arm_joint4: -2.2685
+      left_arm_joint5: 2.995
+      left_arm_joint6: -0.1928
+      left_arm_joint7: 1.5708
+      right_arm_joint1: -0.2227
+      right_arm_joint2: 0.5214
+      right_arm_joint3: 0.2921
+      right_arm_joint4: -2.2685
+      right_arm_joint5: -2.9949
+      right_arm_joint6: -0.1928
+      right_arm_joint7: -1.5708
+  # side_idle with the wrist turned half a revolution about the gripper axis, so that the wrist
+  # camera sits on the far (+x) side of the jaws, facing away from the robot's body (side_idle has
+  # it on the near side). Same TCP and lift. The D1 wrist has no roll joint with a half-turn range
+  # (joint 6, about the gripper axis here, spans +-60 deg; joint 7 spans +-90 deg), so the pose is
+  # side_idle with joint 5 turned by 180 deg, joint 7 mirrored and joint 6 negated. Paired with
+  # jaws-down working poses at ee yaw -45 (left) / +45 (right): no joint turns by more than 80 deg
+  # on the way, joint 5 by about 10 deg.
+  side_idle_outward:
+    lift: 0.20
+    joints:
+      left_arm_joint1: 0.2226
+      left_arm_joint2: 0.5214
+      left_arm_joint3: -0.292
+      left_arm_joint4: -2.2685
+      left_arm_joint5: -0.1466
+      left_arm_joint6: 0.1928
+      left_arm_joint7: -1.5708
+      right_arm_joint1: -0.2227
+      right_arm_joint2: 0.5214
+      right_arm_joint3: 0.2921
+      right_arm_joint4: -2.2685
+      right_arm_joint5: 0.1467
+      right_arm_joint6: 0.1928
+      right_arm_joint7: 1.5708
+# Self-clearance leaves out the torso shell, whose collision geoms the URDF names *_exempt: the arms
+# pass closer to it than the clearance margin in every working pose.
+collision:
+  exempt_geoms: "*_exempt"
+# Position servos of the simulated joints, [kp, force limit N or N m]. The first four arm joints carry
+# the forearm and wrist. base_lag_s: the lag critical damping gives the base mass at kp 60000
+# (measured 0.093-0.096 s), applied to x, y and yaw alike so that the base trails its commanded path
+# in time instead of slipping sideways.
+actuation:
+  base_linear: [60000, 6000]
+  base_yaw: [30000, 3000]
+  lift: [40000, 4000]
+  arm_proximal: [800, 150]
+  arm_distal: [200, 40]
+  arm_proximal_joints: 4
+  finger_kp: 3000
+  other: [50, 10]
+  base_lag_s: 0.095
+ik:
+  solver: dls
+defaults:
+  lift: 0.10
+  neck: {pan: 0.0, tilt: 0.45}
+# The robot daemon's HTTP API (OpenAPI subset, see api/PROVENANCE.md): joint-level ee command lines are
+# requests of this API, translated by the adapter; driver turns the harness's joint targets into requests
+# for the real backend. arm_sides: which daemon side each arm is (side a is the robot's physical left arm).
+api:
+  adapter: omakase_bench.backends.real.d1.api:adapter
+  driver: omakase_bench.backends.real.d1.driver:driver
+  spec: api/openapi.json
+  arm_sides: {left: a, right: b}
+  base_ceilings: {max_linear_m_s: 0.5, max_angular_rad_s: 0.6}
+
+# On-robot defaults of the real backend (backends/real): where the robot's own software publishes what the
+# backend reads when the bench runs on the robot. They describe the robot's deployed camera graph, not
+# hardware, and a run replaces any of them with -B camera.<name>=..., -B depth.<name>=..., -B calibration=...
+real:
+  cameras:
+    # V4L2 loopback devices of the camera daemon (-B camera_source=v4l2). Its example graph for the D1's
+    # depth camera puts the head's colour stream on /dev/video100; the deployed D1 graphs publish the wrist
+    # cameras on topics only, so they have no device here.
+    v4l2: {head: /dev/video100}
+    # shared-memory video topics of the camera daemon (-B camera_source=iceoryx), as its D1 profiles name them
+    iceoryx:
+      head: dxr/camera/head/raw
+      left_wrist: dxr/camera/left_wrist/raw
+      right_wrist: dxr/camera/right_wrist/raw
+    # shared-memory depth topics (either on-robot source): the head camera's depth as gray16 video.
+    # The wrist cameras publish no depth, so the depth lookup covers the head view only.
+    depth: {head: dxr/camera/head/depth}
+  # The grid each depth topic is on. depth: the depth imager's own (the default); the backend then moves it
+  # onto the colour image with the calibrated lens and depth_to_colour. color: the camera daemon already
+  # rendered it into the colour camera's view with the sensor's factory transform (docs/real_robot.md), so
+  # it is used as it is and depth_to_colour does not apply. A run sets it with -B depth_frame.<name>=color
+  depth_frame: {head: depth}
+  # The depth imager's optical frame in the colour camera's optical frame, per camera with a depth topic
+  # (xyz_m, and quat_xyzw when the two are also turned). No measured value exists for the D1, so the depth
+  # imager is taken to sit at the colour camera: on the head camera that leaves out the sensor's baseline of
+  # about 15 mm. A run replaces it with -B depth_to_colour.<name>=x,y,z
+  depth_to_colour:
+    head: {xyz_m: [0.0, 0.0, 0.0], quat_xyzw: [0.0, 0.0, 0.0, 1.0]}
+  # schema omakase.camera_calibration/2: lenses and mounts, written by the robot's calibration tool
+  calibration: ~/.config/omakase/camera_calibration.json
+  # the daemon's arm lease for a run: a model driving the arms is a policy, so an operator-class client
+  # (a teleoperation station) can take the arms from it. A run replaces the class with -B lease_class=...
+  lease: {holder: omakase-bench, class: policy, ttl_s: 30}

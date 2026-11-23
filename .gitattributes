@@ -1,0 +1,5 @@
+# Suite hashes are computed over file bytes: these files keep LF line endings on every platform.
+*.yaml text eol=lf
+*.py text eol=lf
+*.json text eol=lf
+*.urdf text eol=lf

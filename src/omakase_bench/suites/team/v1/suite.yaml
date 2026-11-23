@@ -1,0 +1,5 @@
+id: team
+version: 1
+description: Tasks with several robots in one scene, each driven by its own agent.
+tasks: [block_relay]
+seeds: [0, 1, 2, 3, 4]

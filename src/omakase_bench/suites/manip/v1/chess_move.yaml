@@ -1,0 +1,49 @@
+id: manip/chess_move
+version: 1.1.0
+title: Chess move
+status: draft
+interfaces: [ee, scripted]
+instruction: "{goal}"
+scene:
+  robot: {preset: d1, base: [0, 0, 0], lift: 0.15, neck: {pan: 0.0, tilt: 0.65}}
+  fixtures:
+    - {name: table, type: box, size: [0.60, 1.00, 0.75], pos: [0.63, 0.0, 0.375], color: wood, label: table}
+  cameras:
+    showcase: {pos: [1.20, -0.50, 1.38], lookat: [0.38, 0.0, 0.86], fovy: 45}
+    top: {pos: [0.45, 0.0, 1.9], lookat: [0.45, 0.0, 0.75], fovy: 40}
+# The near three ranks of a chessboard as White sees it from the robot's side. With the gripper
+# pointing down the arms reach three ranks; the left arm reaches files a-e, the right arm d-h.
+generator: omakase_bench.tasks.manipulation.tabletop.generators:chess_move
+params:
+  square: 0.05
+  files: abcdefgh
+  ranks: "123"
+  rank1_x: 0.36                 # x of the centres of rank 1
+  board_thickness: 0.004
+  board_light: [0.82, 0.68, 0.47, 1]
+  board_dark: [0.42, 0.26, 0.14, 1]
+  piece_radius: 0.015
+  pieces:                       # name: [colour, height]
+    white_king: [[0.95, 0.95, 0.92, 1], 0.070]
+    white_knight: [[0.95, 0.95, 0.92, 1], 0.055]
+    white_pawn: [[0.95, 0.95, 0.92, 1], 0.040]
+    black_king: [[0.08, 0.08, 0.10, 1], 0.070]
+    black_knight: [[0.08, 0.08, 0.10, 1], 0.055]
+  arm_files: {left: abcde, right: defgh}
+  max_other_displacement: 0.010
+  open_min: 0.06                # m, jaw opening that counts as an open gripper
+success: {goal: "omakase_bench.tasks.manipulation.tabletop.generators:chess_move_ok"}
+ee:
+  # what the task demands beyond the episode's goal sentence
+  rules: >-
+    Chess move: pick up the named piece by pinching it between the fingertip pads and put it down
+    upright inside the named square, with both grippers open at the end. Do not move any other piece
+    by more than 10 mm or tip it over.
+  horizon: 28
+  # start: TCP x, y, z (m) and yaw (deg) each arm takes before the first step, gripper down, so
+  # that its wrist camera sees its half of the table
+  start: {left: [0.40, 0.17, 1.00, 0], right: [0.40, -0.17, 1.00, 0]}
+  start_path: staged         # leave the robot's home in stages (robot.yaml leave_home_first)
+  # names of the camera views in the tiled image, left to right
+  views: {left: left_wrist, head: head, right: right_wrist}
+budget: {sim_seconds: 60, wall_seconds: 1800, api_calls: 40, model_calls: 50, usd: 1.0}

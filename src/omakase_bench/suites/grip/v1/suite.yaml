@@ -1,0 +1,5 @@
+id: grip
+version: 1
+description: Tasks that narrow the end effectors' range with a task-level gripper block.
+tasks: [packed_grid_pick]
+seeds: [0, 1, 2, 3, 4]

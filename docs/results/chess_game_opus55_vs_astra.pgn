@@ -1,0 +1,10 @@
+[Event "omakase-bench games/chess (MuJoCo)"]
+[Site "?"]
+[Date "2026.11.21"]
+[Round "?"]
+[White "claude-opus-5-5 (robot a)"]
+[Black "gpt-6.2-astra (robot b)"]
+[Result "0-1"]
+[Termination "after 40 moves per side, adjudicated by material (White 3, Black 6)"]
+
+1. e4 c5 2. Nf3 Nc6 3. d4 cxd4 4. Nxd4 Nf6 5. Nc3 e5 6. Ndb5 d6 7. Bg5 a6 8. Na3 b5 9. Nd5 Be7 10. Bxf6 Bxf6 11. c3 Bg5 12. Nc2 O-O 13. a4 Rb8 14. axb5 axb5 15. Bd3 f5 16. exf5 Bxf5 17. O-O e4 18. Be2 Ne5 19. Nd4 Bd7 20. Ne3 Bxe3 21. fxe3 Qg5 22. Qb3+ Kh8 23. Rxf8+ Rxf8 24. Nxb5 Qxe3+ 25. Kh1 Qxe2 26. h3 Qxb5 27. Qxb5 Bxb5 28. Ra5 Bc6 29. Kg1 e3 30. Ra1 e2 31. Re1 Nd3 32. Rxe2 Nf4 33. Rf2 Nxh3+ 34. gxh3 Rxf2 35. Kxf2 Kg8 36. Ke3 Kf7 37. Kd4 Ke6 38. Kc4 Ke5 39. b4 Bd7 40. b5 Be6+ 0-1

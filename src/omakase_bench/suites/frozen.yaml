@@ -1,0 +1,13 @@
+# Published suites: their files and the code they name stay unchanged so that their results can be
+# reproduced. This file is not part of any suite's hash.
+#
+# hashes: suite -> the SHA-256 it was published with (core/suite.py suite_hash). A suite listed here is
+# frozen; `omakase-bench list suites` and the tests fail when one no longer has its hash. Publishing a
+# suite (`omakase-bench suite freeze`) appends to this block, which stays the last one of the file.
+hashes:
+  core@1: d38cbff898a201b6ee7952696217a85632924673d1f78b5a5cf8bcd55a2d1fd6
+  drafts@0: 689908dcf478ac0492cff8257690aba3badf1338a81cccfa90644bc9467dcbec
+  games@1: 7cc046d2825669d71e32716e35c52f122ba8e65798b70ba0c5afc8a6b1cea5aa
+  grip@1: bb9de59b6ca270f03731be12a98870da2f3deaef1e3ca3e506e629b53c79ce2d
+  manip@1: e2a5b6b1fa71d36979f5a091469e8b612b2c9f8cbb7a750c0047dfd6cba6d9aa
+  team@1: d5f98fd88cf2c3b7381848b39a59e28fe34fd68c3d42cdd20b8da81278af98be

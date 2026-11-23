@@ -1,0 +1,4217 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "description": "The `d1-firmwared` HTTP API: one guarded surface over the D1's arms, end effectors (grippers and multi-finger hands alike), pan/tilt neck, eye LED controller, vertical slider and mobile chassis.\n\n## This API is unauthenticated\n\nThe daemon performs **no authentication and no authorization of any kind**. Every caller that can open the port can move a 110 kg robot. It binds the loopback interface by default; keep it there. To reach it from another host, tunnel it over SSH or an equivalently authenticated channel \u2014 do not bind it to a routable address and do not put it behind a bare reverse proxy. The `security: []` below is a statement of fact, not an omission.\n\n## Ratios are fractions, not percentages\n\nEvery `vel_ratio` and `acc_ratio` field is a **fraction of full speed in `0.0..=1.0`**. `0.1` means 10% of full speed. `100` does not mean 100%: it is out of range and is rejected with a 400. Clamping it would silently command full speed, which is why the value is refused rather than clamped.\n\n## Every response is enveloped\n\nThree operations are exceptions on success. `GET /v1/chassis/maps/{scene}/image` returns raw `image/png`, `GET /v1/recorder/dumps/{id}/files/{name}` returns one window of a dump's file as that file's own bytes (`application/x-ndjson` or `application/json`, with `X-Dump-File-Offset`, `X-Dump-File-Total-Bytes` and `X-Dump-File-Eof` saying where the window sits), and `GET /v1/chassis/ultrasonic/stream` returns a `text/event-stream` whose events carry a bare reading rather than an envelope. All three still answer failures with the error envelope, so branch on the response content type and not on the status alone. Otherwise every response body is `{\"status\", \"data\", \"message\"}`. `status` is `ok` or `error`; `message` is always present and is `null` on success; `data` is `null` for commands that return nothing, and `null` on every error. Unknown routes and unknown methods answer with the same 404 envelope rather than a framework 404 or 405.\n\n## Operator arbitration: the arm lease\n\nSeveral consumers can reach this daemon at once, so the arms carry an optional **lease**: `POST /v1/arm/lease` `{\"holder\", \"ttl_s\", \"class\"}` takes, renews or preempts it, `DELETE /v1/arm/lease` `{\"holder\"}` hands it back, and `GET /v1/arm/lease` (also `arm.lease` in `/v1/state`) says who holds it. While it is held, the operations marked `x-arm-lease` refuse anyone else with **409** and a message naming the holder and its class; those operations accept a `holder` field in their request body, which is how the holder identifies itself. Everything else \u2014 every read, `soft_kill`, `release_soft_kill`, `estop`, `clear_errors` and `recover` \u2014 is never arbitrated: the verbs that stop a robot or bring it back must not be withholdable by an operator who has walked away.\n\n**Priority.** A lease is taken in one of three classes \u2014 `ambient` (rank 10), `policy` (50), `operator` (90) \u2014 and a strictly higher class takes the arms off a lower one: a person at a teleop station or the console outranks a policy, which outranks the robot's ambient motion. Equal classes are first-come. **A request that names no class is `ambient`**, the lowest privilege, so consumers can be taught their class one release at a time. A preemption cancels the displaced holder's trajectory and waits \u2014 at most 250 ms \u2014 for its commands to finish before the grant is recorded, and is refused rather than granted if the arms will not go quiet. Nothing is pushed to the displaced holder: it learns from `epoch`/`holder` changing on `GET /v1/arm/lease`, or from its next gated POST answering 409.\n\nIt is **opt-in and lazily expiring**: with no lease held every verb behaves exactly as it did before, and a lease whose TTL has run out is simply taken by the next caller. The holder and its class are self-declared, not credentials \u2014 see the authentication note above. The WebSocket frontend's motion methods take the same opt-in gate: while a lease is held, a request whose `params.holder` does not name its holder is refused with `kind: lease_held`, and `arm.lease.acquire`, `arm.lease.release` and `arm.lease.get` are the lease verbs there. The answer to `POST /v1/arm/lease` carries the grant's `token`, which every command on the shared-memory command path `arm_command.shm/1` must carry.\n\n## Blocking calls\n\nSeveral operations block for real robot motion. Each carries an `x-timeout-seconds` extension giving the longest it is expected to take, so a generated client can size its own timeout: the slider's `set_height` with `wait: true` can take five minutes, end-effector strokes about 40 seconds, arm recovery about 65 seconds, and a waited joint move about 30 seconds. A client default of a few seconds will time out on a call that is working correctly.\n\n## What each call does\n\nEvery operation carries an `x-omakase-auth` extension, `{\"principal\": \"none\", \"reach\": \"loopback\", \"effect\": ...}`, in the platform vocabulary a generated agent CLI or MCP server applies its policy from (`info.x-omakase-kit` is that vocabulary's major version). `principal` is `none` because this daemon authenticates nobody, and `reach` is `loopback` because it is reachable only from the robot itself. `effect` is one of four words, by the most consequential thing the call can do on its own: `read` changes nothing and is exactly the `GET` operations; `write` changes state but moves no hardware and loses nothing that cannot be put back (a read-only computation reached by `POST`, such as `check_pose`, is a `write` too); `destructive` loses something this API cannot restore \u2014 deleted data, a collection replaced wholesale, a rewritten hardware zero, or the soft kill's discarding of every device's running state; and `motion` can set hardware moving. Stop-shaped verbs \u2014 `estop`, the device stops, `disable`, `brake_engage`, `clear_errors`, `pause_nav`, `stop_nav` \u2014 are never `motion`, so that an agent is never held back from stopping the robot by the policy that holds it back from moving it.\n\n## The same verbs over WebSocket\n\nThe WebSocket frontend (default `ws://127.0.0.1:4751/v1/ws`) speaks the same verbs over one persistent connection. An operation callable that way carries an `x-ws-method` extension naming the method to put in a `WsRequest`; an operation without one is REST-only. Requests are dispatched concurrently, so **responses can arrive out of order** \u2014 correlate them by `id`, never by arrival order. The connection also pushes unsolicited `WsSoftKillEvent` and `WsNavEvent` frames, told apart from responses by their `event` field.\n\n**A read-only copy on this origin.** The same protocol is served at `/v1/ws` on the REST origin as well, so a browser page on that origin \u2014 the web console, whose server forwards `/v1` to it \u2014 can hold one connection without knowing the WebSocket listener's port. That copy dispatches ONLY the operations whose verb is `GET` plus the subscription vocabulary below; anything that writes is refused there with `kind: not_found` and a message naming the port that offers it: a motion lane does not belong on the origin a browser page talks to.\n\n**That copy checks `Origin`.** A browser applies the same-origin policy to the REST `GET` routes and applies none of it to a WebSocket upgrade, so the route does the equivalent itself, before upgrading: an upgrade carrying no `Origin` is accepted (every non-browser client sends none), as is one whose `Origin` is the origin it was sent to \u2014 `http://` or `https://` plus the request's own `Host` \u2014 or one listed in the daemon's `[rest] cors_allow_origins`, matched exactly as the CORS allow-list is. Anything else is refused with **403** and `kind: refused`, and no connection is opened. The WebSocket listener on its own port takes no such check.\n\n**Subscriptions.** Two methods are this protocol's own and are in no operation's `x-ws-method`, because they have no REST route: `subscribe` (`WsSubscribeParams` \u2192 `WsSubscribeResult`) turns any subscribable `GET` method into a server push, and `unsubscribe` (`WsUnsubscribeParams` \u2192 `WsUnsubscribeResult`) stops one. The samples arrive as `WsUpdateEvent` frames: the first immediately, then only when the value changes. Sampling intervals are clamped to a per-method floor and the effective one is reported; one connection may hold 32 subscriptions, and all of them end when it closes.\n\n**The arm contracts' records.** `arm.feedback`, `arm.status` and `arm.events` are the reads `GET /v1/arm/feedback`, `/v1/arm/status` and `/v1/arm/events` and carry exactly their payloads \u2014 the shared-memory contracts `arm_feedback.shm/1`, `arm_status.shm/1` and `arm_events.shm/1`, field for field, under the contract's names and with its layout SHA-256 \u2014 so the same record read from shared memory, over REST or over this subscription is the same JSON under the same `header.seq`. Subscribed to, they are driven by the daemon rather than by a timer: `arm.feedback` pushes one record per controller record, at most one per `interval_ms` (default 100 ms; the floor is the daemon's `[ws] arm_feedback_max_hz`, 100 per second by default, because the controller's own rate is about 1000 per second and JSON over a socket is not where that belongs); `arm.status` pushes every status the daemon produces (every 100 ms and when the soft-kill latch moves; a longer `interval_ms` spaces them out); `arm.events` pushes a page for every event as it is raised (`interval_ms` plays no part and is reported as 0), each page being what `GET /v1/arm/events?since=<the previous page's next_since>` would answer. A subscriber that falls behind reads what it missed back from the daemon's ring of the newest 1024 events.\n\n## Clients are generated, not shipped\n\nThis document is the deliverable: generate a client from it with an OpenAPI 3.1 generator such as `openapi-python-client`, `openapi-typescript` + `openapi-fetch`, or `progenitor`. The daemon serves the same document at `GET /openapi.json`.",
+  "license": {
+   "name": "LicenseRef-Proprietary"
+  },
+  "title": "D1 firmware daemon",
+  "version": "0.20.0",
+  "x-omakase-kit": "1",
+  "x-omakase-planes": [
+   "rest"
+  ]
+ },
+ "paths": {
+  "/v1/arm/{side}/mode": {
+   "post": {
+    "description": "The mode is selected by `mode` and carries that mode's own fields. `vel_ratio` and `acc_ratio` are fractions of full speed in `0.0..=1.0`, not percentages, and a value outside that range is rejected.\n\nOne divergence remains between this route and the `arm.{side}.mode` WebSocket method, and it is in what an omitted field means: over REST `position` requires both ratios explicitly, while the WebSocket method defaults an omitted ratio to `0.1`. Every mode, `torque` included, and every field is otherwise reachable identically from both. Send the ratios explicitly and the two behave the same.",
+    "operationId": "arm_mode",
+    "parameters": [
+     {
+      "description": "Which arm: `a` is the robot's physical LEFT arm, `b` its physical RIGHT arm.",
+      "in": "path",
+      "name": "side",
+      "required": true,
+      "schema": {
+       "$ref": "#/components/schemas/ArmSide"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ArmModeCommand"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "description": "This command returns nothing.",
+           "type": "null"
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Set one arm's control mode",
+    "tags": [
+     "arm"
+    ],
+    "x-arm-lease": true,
+    "x-omakase-auth": {
+     "effect": "motion",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-timeout-seconds": 10.0,
+    "x-ws-method": "arm.{side}.mode"
+   }
+  },
+  "/v1/arm/{side}/move_joint": {
+   "post": {
+    "description": "`joint` is a zero-based index in `0..=6`; `position` is degrees. The daemon sends all seven joints: the other six are the arm's current feedback values, from the same read the guard checks. Same motion guard over the path from feedback, same mode precondition and same `advisory` on refusal as `/v1/arm/{side}/move_joints`.",
+    "operationId": "arm_move_joint",
+    "parameters": [
+     {
+      "description": "Which arm: `a` is the robot's physical LEFT arm, `b` its physical RIGHT arm.",
+      "in": "path",
+      "name": "side",
+      "required": true,
+      "schema": {
+       "$ref": "#/components/schemas/ArmSide"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "allOf": [
+         {
+          "$ref": "#/components/schemas/JointRequest"
+         },
+         {
+          "description": "Operator arbitration. See `POST /v1/arm/lease`.",
+          "properties": {
+           "fence": {
+            "description": "The motion fence this request is sent under. On a fenced grant a request is accepted only when this is the grant's current fence (see `POST /v1/arm/lease/fence`), and refused with 409 `stale_authority` otherwise. Ignored on an unfenced grant.",
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+           },
+           "holder": {
+            "description": "The arm lease holder issuing this command. Required only while somebody holds the lease: with no lease held the field is ignored, and with one held a request whose `holder` does not match is refused with 409.",
+            "type": "string"
+           },
+           "lease_token": {
+            "description": "The lease grant's token, as the holder's own `POST /v1/arm/lease` answer carried it. Required, with `fence`, on every request of a fenced grant. On an unfenced grant a token that is not the live grant's is refused; with no lease held any token is refused (its grant has ended). Refusals are 409 `stale_authority`.",
+            "pattern": "^[0-9a-f]{16}$",
+            "type": "string"
+           }
+          },
+          "title": "ArmLeaseHolder",
+          "type": "object"
+         }
+        ]
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "description": "This command returns nothing.",
+           "type": "null"
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Command one joint of one arm",
+    "tags": [
+     "arm"
+    ],
+    "x-arm-lease": true,
+    "x-omakase-auth": {
+     "effect": "motion",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-timeout-seconds": 30.0,
+    "x-ws-method": "arm.{side}.move_joint"
+   }
+  },
+  "/v1/arm/{side}/move_joints": {
+   "post": {
+    "description": "Angles are degrees. With `wait: true` the call blocks until the arm reports arrival.\n\nThe motion guard checks the straight joint-space path from the arm's current feedback pose to the target, with the other arm at its own feedback pose, sampled at 1 degree per joint: each sample is one dual-arm pose checked for body and chest keep-out, arm-arm and same-arm clearance at the configured margins, and the target is checked against the URDF joint limits. A path that fails is refused with `kind: refused` before anything is written, naming the sample, the moving joints and each pair under its margin with its distance; a path that starts inside a margin is accepted while no clearance gets smaller than at the start. The clearance guard cannot be switched off.\n\nThe arm has to be in a mode that acts on a joint command (`position`, `pvt` or a torque mode). If it is not, the call is refused at once with `kind: refused` and nothing is written; an arm that is merely idle carries an `advisory` in the failure envelope naming the recover call that energises it. Without that refusal a waited call to an idle arm would sit out the full 30-second move timeout waiting for a convergence that servo-off joints cannot reach.",
+    "operationId": "arm_move_joints",
+    "parameters": [
+     {
+      "description": "Which arm: `a` is the robot's physical LEFT arm, `b` its physical RIGHT arm.",
+      "in": "path",
+      "name": "side",
+      "required": true,
+      "schema": {
+       "$ref": "#/components/schemas/ArmSide"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "allOf": [
+         {
+          "$ref": "#/components/schemas/JointsRequest"
+         },
+         {
+          "description": "Operator arbitration. See `POST /v1/arm/lease`.",
+          "properties": {
+           "fence": {
+            "description": "The motion fence this request is sent under. On a fenced grant a request is accepted only when this is the grant's current fence (see `POST /v1/arm/lease/fence`), and refused with 409 `stale_authority` otherwise. Ignored on an unfenced grant.",
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+           },
+           "holder": {
+            "description": "The arm lease holder issuing this command. Required only while somebody holds the lease: with no lease held the field is ignored, and with one held a request whose `holder` does not match is refused with 409.",
+            "type": "string"
+           },
+           "lease_token": {
+            "description": "The lease grant's token, as the holder's own `POST /v1/arm/lease` answer carried it. Required, with `fence`, on every request of a fenced grant. On an unfenced grant a token that is not the live grant's is refused; with no lease held any token is refused (its grant has ended). Refusals are 409 `stale_authority`.",
+            "pattern": "^[0-9a-f]{16}$",
+            "type": "string"
+           }
+          },
+          "title": "ArmLeaseHolder",
+          "type": "object"
+         }
+        ]
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "description": "This command returns nothing.",
+           "type": "null"
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Command one arm to a joint target",
+    "tags": [
+     "arm"
+    ],
+    "x-arm-lease": true,
+    "x-omakase-auth": {
+     "effect": "motion",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-timeout-seconds": 30.0,
+    "x-ws-method": "arm.{side}.move_joints"
+   }
+  },
+  "/v1/arm/move_joints_both": {
+   "post": {
+    "description": "Angles are degrees. The motion guard checks the straight joint-space path from both arms' current feedback pose to the two targets, sampled at 1 degree per joint, each sample one dual-arm pose checked for body and chest keep-out, arm-arm and same-arm clearance at the configured margins; the targets are checked against the URDF joint limits. Because the two paths are checked together it accepts a coordinated move (arm A going where arm B is while B leaves) that \"A, then B\" as two single-arm calls would refuse. A path that fails is refused with `kind: refused` before anything is written, naming the sample, the moving joints and each pair under its margin with its distance; a path that starts inside a margin is accepted while no clearance gets smaller than at the start. The clearance guard cannot be switched off.\n\nStreaming (teleop sends this route at up to 200 Hz): a call with `wait: false` within 250 ms of the previous one, with no other arm verb in between, is a streamed tick, and the approach limiter slows it before the guard sees it. Each arm's step from the previous WRITTEN target is scaled so that no clearance (body, chest keep-out, arm-arm, same-arm) and no joint limit closes faster than `v = a(-T + sqrt(T^2 + 2(d - d_stop)/a))` for the distance `d` left, `d_stop` being the guard's margin or the joint limit and `T` and `a` the `[arm] approach_*` parameters; nor may it come closer at all while the arm's own feedback velocity already approaches faster than that. Motion that opens a clearance is never slowed. The margin is therefore reached only at a speed that goes to zero on it, and a streamed tick sent into a margin is written short of it instead of being refused. The scaled pose is what the guard checks and what is written, and the success envelope then carries `slowed` (stage, distance, per-arm scale and the poses written); it is absent when the pose sent was written unchanged. A refused command is not written, so the arms hold the last written target; nothing latches, and the next command whose path is clear is accepted at once, so a streaming client just keeps streaming. A first call, or one after a pause or another arm verb, is a single-shot move the guard alone governs.\n\nBoth arms have to be in a mode that acts on a joint command (`position`, `pvt` or a torque mode). If either is not, the call is refused at once with `kind: refused` and no command is written to either arm; an arm that is merely idle carries an `advisory` in the failure envelope naming the recover call that energises it.",
+    "operationId": "arm_move_joints_both",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "allOf": [
+         {
+          "$ref": "#/components/schemas/BothJointsRequest"
+         },
+         {
+          "description": "Operator arbitration. See `POST /v1/arm/lease`.",
+          "properties": {
+           "fence": {
+            "description": "The motion fence this request is sent under. On a fenced grant a request is accepted only when this is the grant's current fence (see `POST /v1/arm/lease/fence`), and refused with 409 `stale_authority` otherwise. Ignored on an unfenced grant.",
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
+           },
+           "holder": {
+            "description": "The arm lease holder issuing this command. Required only while somebody holds the lease: with no lease held the field is ignored, and with one held a request whose `holder` does not match is refused with 409.",
+            "type": "string"
+           },
+           "lease_token": {
+            "description": "The lease grant's token, as the holder's own `POST /v1/arm/lease` answer carried it. Required, with `fence`, on every request of a fenced grant. On an unfenced grant a token that is not the live grant's is refused; with no lease held any token is refused (its grant has ended). Refusals are 409 `stale_authority`.",
+            "pattern": "^[0-9a-f]{16}$",
+            "type": "string"
+           }
+          },
+          "title": "ArmLeaseHolder",
+          "type": "object"
+         }
+        ]
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "description": "This command returns nothing.",
+           "type": "null"
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "slowed": {
+           "allOf": [
+            {
+             "$ref": "#/components/schemas/ApproachSlowing"
+            }
+           ],
+           "description": "Present only when the approach limiter slowed this streamed tick: the pose written is not the pose sent. Absent otherwise."
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Command both arms to joint targets in one guarded call",
+    "tags": [
+     "arm"
+    ],
+    "x-arm-lease": true,
+    "x-omakase-auth": {
+     "effect": "motion",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-timeout-seconds": 30.0,
+    "x-ws-method": "arm.move_joints_both"
+   }
+  },
+  "/v1/arm/{side}/estop": {
+   "post": {
+    "description": "A controller-level stop for one arm; it does not latch the soft kill and it is not the physical emergency stop.",
+    "operationId": "arm_estop",
+    "parameters": [
+     {
+      "description": "Which arm: `a` is the robot's physical LEFT arm, `b` its physical RIGHT arm.",
+      "in": "path",
+      "name": "side",
+      "required": true,
+      "schema": {
+       "$ref": "#/components/schemas/ArmSide"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "description": "This command returns nothing.",
+           "type": "null"
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Stop one arm at the controller",
+    "tags": [
+     "arm"
+    ],
+    "x-omakase-auth": {
+     "effect": "write",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-timeout-seconds": 10.0,
+    "x-ws-method": "arm.{side}.estop"
+   }
+  },
+  "/v1/end_effectors/{side}/set": {
+   "post": {
+    "description": "`openness` is `1.0` fully open \u2026 `0.0` fully closed: a gripper's one openness degree of freedom, an open hand (`1.0`) to a fist (`0.0`) on a multi-finger hand; `0.3` is a mostly closed posture. How a value maps to actuators is the driver's (see the descriptor's `driver`). A value outside [0, 1] is refused (422 `unprocessable`), never clamped. A driver whose capabilities list grip presets or `grip_torque` force-limits the stroke: it stops on an object and holds it at the cap named by `grip` (one of the presets the descriptor lists) or by an explicit `torque_nm`; driver-scoped parameters go in `extra`, limited to the keys the capabilities' `set_extra` lists. A grip field the side's driver does not list, or an `extra` key outside its capabilities' `set_extra`, is refused (422). `force_percent` sets the grip force on every end effector's own scale, `0` its gentlest \u2026 `100` its strongest, and needs no capability: an end effector without adjustable force applies its fixed force, and a side whose provider does not take it drops it; `state.grip_force` reports which. It is refused (422) outside [0, 100] or together with `grip` or `torque_nm`. `extra.force_percent` stays an ordinary `extra` key, taken by a driver whose `set_extra` lists it and passed to it unchanged; sent with `force_percent`, the two must be equal (422 otherwise). `wait` (default `true`) blocks for the stroke on a driver with `stroke_completion`, and a stroke that was stopped or halted answers an error; `wait: false` records the target and returns at once, and the driver drives toward the newest one (the lane a fixed-rate controller streams into). Unknown fields are refused. Not arbitrated by the arm lease; refused under the end-effector soft-kill latch.",
+    "operationId": "end_effector_set",
+    "parameters": [
+     {
+      "description": "Which arm: `a` is the robot's physical LEFT arm, `b` its physical RIGHT arm.",
+      "in": "path",
+      "name": "side",
+      "required": true,
+      "schema": {
+       "$ref": "#/components/schemas/ArmSide"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/EndEffectorSetRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "description": "This command returns nothing.",
+           "type": "null"
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "422": {
+      "$ref": "#/components/responses/Unprocessable"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Drive one side's end effector to an openness",
+    "tags": [
+     "end_effectors"
+    ],
+    "x-omakase-auth": {
+     "effect": "motion",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-timeout-seconds": 40.0,
+    "x-ws-method": "end_effectors.{side}.set"
+   }
+  },
+  "/v1/end_effectors/{side}/stop": {
+   "post": {
+    "description": "Ends whatever the end effector is doing \u2014 a stroke in flight, a capped hold, a streamed target \u2014 and leaves its actuators disabled. It never opens: whatever is held would drop from wherever the arm is. A blocking `set` interrupted by it answers `refused`; how the state's `detail` records the interrupted stroke is the driver's own schema. Reachable while the soft kill is latched and whoever holds the arm lease, because it only takes motion away; a side that carries nothing answers `ok`. The other side is untouched.",
+    "operationId": "end_effector_stop",
+    "parameters": [
+     {
+      "description": "Which arm: `a` is the robot's physical LEFT arm, `b` its physical RIGHT arm.",
+      "in": "path",
+      "name": "side",
+      "required": true,
+      "schema": {
+       "$ref": "#/components/schemas/ArmSide"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "description": "This command returns nothing.",
+           "type": "null"
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Stop one side's end effector and take its actuators' authority away",
+    "tags": [
+     "end_effectors"
+    ],
+    "x-omakase-auth": {
+     "effect": "write",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-timeout-seconds": 3.0,
+    "x-ws-method": "end_effectors.{side}.stop"
+   }
+  },
+  "/v1/slider/set_height": {
+   "post": {
+    "description": "Exactly one of `height_m` and `delta_m` is sent; neither and both are `400`.\n\n`height_m` is metres above the drive's origin. With `wait: true` the call blocks until the slider reports arrival, which is the slowest call in this API; size the client timeout accordingly. It is refused with `409` while `slider/state` reports `zero_reference: \"unknown\"`: the height is measured from the drive's origin, and a drive that cannot vouch for its origin would take this move somewhere other than where it names. The refusal carries an `advisory` naming the way out. It is refused with `400` when it falls outside the effective range in `slider/state.travel_limits` (the SOFTWARE limits, which the daemon checks), and the message names WHICH layer refused it -- the model ceiling `[slider] travel_max_m`, or this unit's recorded calibration. The check is by direction: a carriage already past a limit (an overshoot through inertia or load) is admitted a target beyond that same limit as long as the move goes back toward the range, and only a move further out is refused. The drive's own limits (`slider/state.hardware_limits`) are enforced by the drive itself.\n\n`delta_m` is a small RELATIVE amount in metres from wherever the carriage stands, negative for down. It depends on no origin, so it is the one move a lift with `zero_reference: \"unknown\"` can be given -- which is how a carriage is walked down onto its mechanical stop before `slider/set_zero`. It is admitted only on a daemon started with `[slider] commissioning = true` (otherwise `409` with an `advisory`), capped at 0.01 m per call (`400` above that, never silently clamped). It runs at the commissioning floor, `0.05` of full speed, when no `speed_ratio` is sent; a `speed_ratio` sent with it names the step's speed and must be at or above that floor (`400` below it, never silently raised). The slider soft-kill latch and `slider/stop` apply to it exactly as to any move.",
+    "operationId": "slider_set_height",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SliderMove"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "description": "This command returns nothing.",
+           "type": "null"
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Move the torso lift to an absolute height, or by one small commissioning step",
+    "tags": [
+     "slider"
+    ],
+    "x-omakase-auth": {
+     "effect": "motion",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-timeout-seconds": 300.0,
+    "x-ws-method": "slider.set_height"
+   }
+  },
+  "/v1/neck/cmd": {
+   "post": {
+    "description": "Angles are radians: positive pitch looks up, positive yaw turns right. With `relative: true` the supplied axes are deltas. An omitted axis is left alone.",
+    "operationId": "neck_cmd",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/NeckCommand"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "description": "This command returns nothing.",
+           "type": "null"
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Command a neck pose or pose delta",
+    "tags": [
+     "neck"
+    ],
+    "x-omakase-auth": {
+     "effect": "motion",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-ws-method": "neck.cmd"
+   }
+  },
+  "/v1/chassis/cmd_vel": {
+   "post": {
+    "description": "One command, not a stream: the chassis holds the last commanded velocity, so a caller driving continuously must keep sending and must send a zero velocity to stop.",
+    "operationId": "chassis_cmd_vel",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ChassisVelocity"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "description": "This command returns nothing.",
+           "type": "null"
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Command a chassis body velocity",
+    "tags": [
+     "chassis"
+    ],
+    "x-omakase-auth": {
+     "effect": "motion",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-ws-method": "chassis.cmd_vel"
+   }
+  },
+  "/v1/limits": {
+   "get": {
+    "description": "Constants compiled into the binary: the neck's logical pitch/yaw envelope,                       home pose and velocity ceilings; the torso lift's stroke; the mobile base's                       speed ceilings and watchdog intervals; the arm's                       per-joint travel, both arms' HOME pose (`arm.home_deg`, degrees, the kit's pose) and both arms' STOW pose (`arm.stow_deg`, degrees, the kit's storage pose).\n\nNo device is touched, so this answers on a robot with                       everything asleep or soft-killed \u2014 which is the point: a consumer clamps to                       these before a command is ever sent. Anything that varies per robot or per                       moment is device STATE and lives under `*/state` instead. The neck figures                       are the LOGICAL frame (`neck/cmd`'s frame, pitch positive = up); the motor                       frame beneath it is this daemon's business and is deliberately not                       published.",
+    "operationId": "limits",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "$ref": "#/components/schemas/Limits"
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Every envelope this daemon enforces",
+    "tags": [
+     "health"
+    ],
+    "x-omakase-auth": {
+     "effect": "read",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-ws-method": "limits"
+   }
+  },
+  "/v1/arm/feedback": {
+   "get": {
+    "description": "The `arm_feedback.shm/1` record as JSON: the newest controller feedback record the daemon received (about one per millisecond while the controller streams), with both arms' state, error and frame-miss counters, measured, echoed and accepted joint commands, velocity, position error, current, torque, temperature, the controller's friction, force and Cartesian-force estimates, the impedance, force-control and tool registrations in effect, the parameter-reply slot, and the 1428-byte record itself (base64). The fields are the contract's, under its names, in the controller's own units and codes; `header.seq` counts the records since the daemon started and `rx_mono_ns` is `CLOCK_MONOTONIC` at receipt, so a record can be lined up with the same record read from shared memory or pushed by the `arm.feedback` subscription. `layout_sha256` is the contract's layout pin. A daemon whose arm backend streams no records, or that has received none yet, answers unavailable.",
+    "operationId": "arm_feedback",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "$ref": "#/components/schemas/ArmFeedbackRecord"
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Read the newest arm controller feedback record, both arms, every signal",
+    "tags": [
+     "arm"
+    ],
+    "x-omakase-auth": {
+     "effect": "read",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-ws-method": "arm.feedback"
+   }
+  },
+  "/v1/end_effectors": {
+   "get": {
+    "description": "One entry per arm side, `a` then `b`, each the same object `/v1/end_effectors/{side}` answers: whether the side is fitted, what its driver declares (`descriptor`: driver, model, the bus address the startup probe found, joints with units and limits, capabilities, the tool model registered on the arm) and its state (openness estimate, joints, contact, cap reached, the driver's own report under `detail`). A side whose read failed carries `state: null` and the reason in `error`; the list itself never fails.",
+    "operationId": "end_effectors_list",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "items": {
+            "$ref": "#/components/schemas/EndEffector"
+           },
+           "type": "array"
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Read both sides' end effectors",
+    "tags": [
+     "end_effectors"
+    ],
+    "x-omakase-auth": {
+     "effect": "read",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-ws-method": "end_effectors.list"
+   }
+  },
+  "/v1/slider/state": {
+   "get": {
+    "description": "A direct read of the slider controller over its serial link (about 100-200 ms). An unreadable slider is an error envelope (`502`), unlike the `/v1/state` slot which degrades in place.\n\nThe lift's limits are published by SIDE, because the two sides may legitimately hold different values and neither is derived from the other. `travel_limits` is the SOFTWARE side, which this daemon records and checks: every layer and the `effective` range they come to together, which is the range `set_height` admits; `model` is `[0, travel_max_m]` from the daemon's configuration, and `unit` is this robot's bench calibration (written by `slider/set_limits`) or `null` when none has been recorded. A layer only ever narrows. `hardware_limits` is the HARDWARE side, which the drive holds and enforces by itself, read back from the drive: its position-limit registers (`0x6006`-`0x6009`), whether they are in force (`Pr8.00` bit 1), and its origin settings. When both sides are set and differ, `advisory` says so (`slider_limits_differ`), naming both values.\n\n`alarm`, `alarm_code` and `alarm_text` are the drive's alarm register. A carriage stepped into its mechanical bottom stalls there and the drive raises an alarm and takes no further motion until `slider/reset_alarm`; which code the D1's drive raises for that stall has not been recorded, so read the alarm rather than matching a code. `multiturn_lost` is `true` while the alarm is Er153 (`0x153`, decimal 339), the multi-turn encoder's battery error: the absolute position is lost. `slider/reset_alarm` does not clear it; `slider/set_zero` recovers it before it sets the zero.\n\n`zero_verification` is separate from `zero_reference` and additive to it. `zero_reference` asks whether the drive can vouch for its origin right now; this asks whether the origin this daemon last wrote has been read back after a power cycle, which is the only evidence that the drive persisted it rather than holding it in RAM. `unrecorded` means this daemon has no record of setting one and is not a fault.\n\n`advisory` is additive and absent unless the origin, or two sides holding different limits, earn one; a commissioned and verified lift whose two sides agree never carries one. Nothing on the advisory path writes to the drive.",
+    "operationId": "slider_state",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "$ref": "#/components/schemas/SliderState"
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Read slider feedback",
+    "tags": [
+     "slider"
+    ],
+    "x-omakase-auth": {
+     "effect": "read",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-ws-method": "slider.state"
+   }
+  },
+  "/v1/neck/state": {
+   "get": {
+    "operationId": "neck_state",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "$ref": "#/components/schemas/NeckState"
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Read neck feedback",
+    "tags": [
+     "neck"
+    ],
+    "x-omakase-auth": {
+     "effect": "read",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-ws-method": "neck.state"
+   }
+  },
+  "/v1/chassis/amr/localization": {
+   "get": {
+    "description": "The localization strategy, its graded state (`lost`, `converging`, `confident`) with its score and spreads, and the pose. Forwarded to `d1-amr-firmwared`, the daemon of the in-house base firmware, which `d1-firmwared` reaches only under `[chassis] backend = \"d1amr\"`; under any other chassis backend the operation answers 502 `unavailable`. The request and response bodies are those of `d1-amr-firmwared`, defined by d1-amr-firmware's contract (its `interfaces/openapi.json`) and not restated in this document: `data` is that daemon's answer, unchanged, and its refusal arrives as this API's error envelope with its `reason_code` in the message.",
+    "operationId": "chassis_amr_localization_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "description": "A JSON value forwarded from the chassis vendor; its shape is not pinned by this document."
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Read the localization state",
+    "tags": [
+     "chassis"
+    ],
+    "x-omakase-auth": {
+     "effect": "read",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-ws-method": "chassis.amr.localization.get"
+   }
+  },
+  "/v1/arm/lease": {
+   "get": {
+    "description": "`null` when the arms are free, including when the last lease has expired but nobody has taken it since. The same reading appears as `arm.lease` in `/v1/state`.",
+    "operationId": "arm_lease_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "anyOf": [
+            {
+             "$ref": "#/components/schemas/ArmLease"
+            },
+            {
+             "type": "null"
+            }
+           ]
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Read the current arm lease",
+    "tags": [
+     "arm"
+    ],
+    "x-omakase-auth": {
+     "effect": "read",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-ws-method": "arm.lease.get"
+   },
+   "post": {
+    "description": "Arbitration between the consumers that can all reach this daemon \u2014 a teleop session, a policy, and the robot's own ambient motion. While a lease is held, arm motion from anyone else is refused with 409 naming the holder; reads, `estop`, `clear_errors`, `recover` and the soft kill are never arbitrated.\n\nGranted when the lease is free, when the current one has expired, or when you already hold it \u2014 that last case is the heartbeat, so renew by repeating this call well inside `ttl_s`. `ttl_s` defaults to 30 seconds and may not exceed 600; expiry is evaluated when the lease is next read, so a consumer that dies frees the arms without anything having to notice it died.\n\n**Priority.** `class` is `ambient` (rank 10), `policy` (50) or `operator` (90), and **an omitted `class` means `ambient`** \u2014 the lowest privilege there is, so a consumer written before classes existed cannot outrank one written after. A request of a strictly HIGHER class than the holder preempts it: the answer carries `preempted_from` and a new `epoch`. An equal class is first-come (409), and a lower one is 409 too. `epoch` increments on every fresh grant and never on a heartbeat, so a consumer that reads its own name back can tell \"I still hold these\" from \"I lost them and have them again\" \u2014 and therefore whether what it believed about the arms is stale.\n\n**A preemption stops the arms first.** The displaced holder's trajectory is cancelled (`cancelled`, not `failed`) and both arms are taken exclusively before the grant is recorded, so the new holder never inherits a moving robot. The arm mode is deliberately NOT changed: a position or torque hold is where the arms are left. If the displaced holder has a command still in flight \u2014 a waited `move_joints` is the one that lasts \u2014 the hand-over gives up after 250 ms and the preemption is refused with 409 `hand-over timed out; the current holder has a command in flight`; the lease does not move. Stop the robot (`/v1/soft_kill`, `estop` \u2014 never leased) and ask again.\n\nThere is no push notification: a displaced holder finds out by reading `GET /v1/arm/lease` (different `holder`, different `epoch`) or by having its next gated POST refused.\n\nThe holder and the class are self-declared, not credentials: this daemon authenticates nobody, and the lease coordinates cooperating consumers rather than defending against a hostile one. Arbitration is opt-in \u2014 with no lease held every verb behaves exactly as it did before.\n\n**The token.** This answer, for a fresh grant and for a renewal, carries `token`: 16 hexadecimal digits that no other view of the lease shows. A fresh grant draws a new one and a renewal keeps it. Every command on the shared-memory command path `arm_command.shm/1` carries it, and one whose token is not the live lease's is refused.\n\n**The motion fence.** Ask with `\"fenced\": true` and the answer also carries `fence`, which starts at 1 on a fresh grant and is kept by a renewal (a renewal keeps a fenced grant fenced). Every `x-arm-lease` request of a fenced grant must then carry the grant's `lease_token` and the `fence` it is sent under; one that does not is refused with 409 `stale_authority`. `POST /v1/arm/lease/fence` raises the fence. A daemon that implements the fence always answers `fence` to a request that asked for `fenced`, so its absence tells a consumer the daemon does not fence motion.",
+    "operationId": "arm_lease_acquire",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ArmLeaseRequest"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "$ref": "#/components/schemas/ArmLease"
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Take, renew or preempt the operator lease on both arms",
+    "tags": [
+     "arm"
+    ],
+    "x-omakase-auth": {
+     "effect": "write",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-timeout-seconds": 0.5,
+    "x-ws-method": "arm.lease.acquire"
+   },
+   "delete": {
+    "description": "Releases only if `holder` matches the current holder; releasing somebody else's lease is refused with 409. Releasing when no lease is held succeeds, so a consumer shutting down need not know whether its own lease already expired.",
+    "operationId": "arm_lease_release",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ArmLeaseRelease"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "properties": {
+          "data": {
+           "description": "This command returns nothing.",
+           "type": "null"
+          },
+          "message": {
+           "description": "Always null on success.",
+           "type": "null"
+          },
+          "status": {
+           "const": "ok",
+           "type": "string"
+          }
+         },
+         "required": [
+          "status",
+          "data",
+          "message"
+         ],
+         "type": "object"
+        }
+       }
+      },
+      "description": "The success envelope."
+     },
+     "400": {
+      "$ref": "#/components/responses/BadRequest"
+     },
+     "404": {
+      "$ref": "#/components/responses/NotFound"
+     },
+     "409": {
+      "$ref": "#/components/responses/Conflict"
+     },
+     "502": {
+      "$ref": "#/components/responses/BadGateway"
+     },
+     "504": {
+      "$ref": "#/components/responses/GatewayTimeout"
+     }
+    },
+    "summary": "Hand the arms back",
+    "tags": [
+     "arm"
+    ],
+    "x-omakase-auth": {
+     "effect": "write",
+     "principal": "none",
+     "reach": "loopback"
+    },
+    "x-ws-method": "arm.lease.release"
+   }
+  }
+ },
+ "components": {
+  "responses": {
+   "BadGateway": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/ErrorEnvelope"
+      }
+     }
+    },
+    "description": "A device or backend failed, or the requested capability is not available in this daemon's configuration."
+   },
+   "BadRequest": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/ErrorEnvelope"
+      }
+     }
+    },
+    "description": "The request was malformed, out of range, or refused by the motion guard."
+   },
+   "Conflict": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/ErrorEnvelope"
+      }
+     }
+    },
+    "description": "The device's soft-kill latch is engaged, a device or mode policy refused an otherwise valid command, or (`kind: stale`) a timestamped command was not newer than the newest one already accepted."
+   },
+   "GatewayTimeout": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/ErrorEnvelope"
+      }
+     }
+    },
+    "description": "A device operation exceeded its deadline. The command may still have taken effect: it is not safe to assume a timeout means nothing happened."
+   },
+   "NotFound": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/ErrorEnvelope"
+      }
+     }
+    },
+    "description": "No such route, or no such navigation goal, trajectory job or expression."
+   },
+   "Unprocessable": {
+    "content": {
+     "application/json": {
+      "schema": {
+       "$ref": "#/components/schemas/ErrorEnvelope"
+      }
+     }
+    },
+    "description": "The request is well formed but its values do not fit the addressed resource (`kind: unprocessable`): an openness outside [0, 1], a joint count other than the declared degrees of freedom, a joint target outside its limits, a timestamp too far ahead of the daemon clock, or a field the resource's driver does not take."
+   }
+  },
+  "schemas": {
+   "Advisory": {
+    "description": "One suggestion about one device's current state.\n\nAdditive everywhere it appears: absent when the state earns none.",
+    "properties": {
+     "code": {
+      "$ref": "#/components/schemas/AdvisoryCode",
+      "description": "The stable word to branch on."
+     },
+     "message": {
+      "description": "One sentence for a human, naming the state and the next step.",
+      "type": "string"
+     },
+     "severity": {
+      "$ref": "#/components/schemas/AdvisorySeverity",
+      "description": "How much attention this asks for."
+     },
+     "suggested_action": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "$ref": "#/components/schemas/SuggestedAction",
+        "description": "The call that changes the state, when the next step IS a call.\n\nAbsent when it is not: a lift whose daemon was started without\n`[slider] commissioning = true` is moved on by editing that file and\nrestarting, and there is no verb for that on purpose (the REST\nsurface is unauthenticated, so a verb that turned commissioning on\nwould be a verb that turned every other gate off). An advisory with\nno action still names the step in `message`."
+       }
+      ]
+     }
+    },
+    "required": [
+     "severity",
+     "code",
+     "message"
+    ],
+    "type": "object"
+   },
+   "AdvisoryCode": {
+    "description": "A stable machine word for one advisory, independent of its wording.\n\nA consumer branches on this, never on [`Advisory::message`] \u2014 the same\nrule [`crate::ErrorKind`] states for failures, for the same reason.",
+    "enum": [
+     "arm_idle_recover_suggested",
+     "slider_commissioning_required",
+     "slider_zero_verification_pending",
+     "slider_limits_differ",
+     "obstacle_assist_disabled",
+     "obstacle_assist_none_selected",
+     "obstacle_assist_no_strategy_available",
+     "obstacle_assist_selected_cannot_run",
+     "obstacle_assist_strategy_unavailable"
+    ],
+    "type": "string"
+   },
+   "AdvisorySeverity": {
+    "description": "How much of an operator's attention one advisory asks for.\n\nAn enum rather than a bare string so a later advisory can be published at\na higher severity without any consumer changing the shape it parses.\nToday exactly one severity is produced: both the arm's idle state and the\nlift's uncommissioned origin are states the machine is legitimately in,\nso they are information and nothing more.",
+    "enum": [
+     "info"
+    ],
+    "type": "string"
+   },
+   "ApproachCause": {
+    "description": "What asked for the slowing.",
+    "enum": [
+     "target",
+     "feedback"
+    ],
+    "type": "string"
+   },
+   "ApproachSlowing": {
+    "description": "How a streamed `move_joints_both` tick was slowed. Present on the answer\nonly when the pose written differs from the pose sent.",
+    "properties": {
+     "cause": {
+      "$ref": "#/components/schemas/ApproachCause",
+      "description": "Whether the stream or the arm's own speed asked for it."
+     },
+     "commanded_a": {
+      "description": "Arm A's written joint target, in degrees.",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "commanded_b": {
+      "description": "Arm B's written joint target, in degrees.",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "distance": {
+      "description": "The clearance of that stage's binding pair at the written pose:\nmetres, or degrees to the limit for `joint_limit`.",
+      "format": "double",
+      "type": "number"
+     },
+     "joint": {
+      "description": "The joint, 1..=7, for `joint_limit`.",
+      "format": "int32",
+      "minimum": 0,
+      "type": [
+       "integer",
+       "null"
+      ]
+     },
+     "scale_a": {
+      "description": "The fraction of arm A's step, from the previous written target to the\nsent one, that was written: `1` unchanged, `0` held.",
+      "format": "double",
+      "type": "number"
+     },
+     "scale_b": {
+      "description": "The same for arm B.",
+      "format": "double",
+      "type": "number"
+     },
+     "side": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "$ref": "#/components/schemas/ArmSide",
+        "description": "The arm that stage belongs to; absent for `arm_arm` and `hand_arm`,\nwhich are both."
+       }
+      ]
+     },
+     "stage": {
+      "$ref": "#/components/schemas/ApproachStage",
+      "description": "The stage that asked for the smallest scale."
+     },
+     "stop": {
+      "description": "The distance at which that stage allows no approach at all (the\nguard's margin plus 0.1 mm, or the joint limit), in the same unit.",
+      "format": "double",
+      "type": "number"
+     }
+    },
+    "required": [
+     "scale_a",
+     "scale_b",
+     "stage",
+     "distance",
+     "stop",
+     "cause",
+     "commanded_a",
+     "commanded_b"
+    ],
+    "type": "object"
+   },
+   "ApproachStage": {
+    "description": "The clearance stage a slowing came from.",
+    "enum": [
+     "body",
+     "chest_keepout",
+     "self_collision",
+     "arm_arm",
+     "hand_arm",
+     "joint_limit"
+    ],
+    "type": "string"
+   },
+   "ArmContractHeader": {
+    "description": "The 32-byte header every arm contract message starts with.",
+    "properties": {
+     "instance_id": {
+      "description": "The daemon's instance: drawn once when it starts, so a consumer can\ntell a restarted daemon from the one it was reading.",
+      "format": "int64",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "mono_ns": {
+      "description": "`CLOCK_MONOTONIC` nanoseconds when the daemon produced the message.",
+      "format": "int64",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "reserved": {
+      "description": "Zero.",
+      "format": "int32",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "schema_version": {
+      "description": "The contract's schema version (`1`).",
+      "format": "int32",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "seq": {
+      "description": "Strictly increasing from 1 per contract since the daemon started.",
+      "format": "int64",
+      "minimum": 0,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "schema_version",
+     "reserved",
+     "instance_id",
+     "seq",
+     "mono_ns"
+    ],
+    "type": "object"
+   },
+   "ArmFeedbackRecord": {
+    "description": "One controller feedback record, every signal of it: the\n`arm_feedback.shm/1` message as JSON.",
+    "properties": {
+     "contract": {
+      "description": "`arm_feedback.shm/1`.",
+      "type": "string"
+     },
+     "controller_version": {
+      "description": "The controller's firmware version, `0` while the daemon has not read\nit.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "flags": {
+      "description": "`FEEDBACK_*` bits: `1` the controller's firmware family contradicts\nthe configured protocol, `2` the raw record was truncated.",
+      "format": "int32",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "header": {
+      "$ref": "#/components/schemas/ArmContractHeader",
+      "description": "The common header; `seq` counts the records since the daemon started,\n`mono_ns` is when it produced this one."
+     },
+     "layout_sha256": {
+      "description": "The SHA-256 of the contract's committed layout document: which\nversion of the contract these fields are.",
+      "type": "string"
+     },
+     "para_cmd_serial": {
+      "description": "The serial of the parameter command the reply slot belongs to.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "para_ins": {
+      "description": "The parameter reply's instruction.",
+      "format": "int32",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "para_name": {
+      "description": "The parameter reply's name (the wire's NUL-padded bytes, as text).",
+      "type": "string"
+     },
+     "para_ret_serial": {
+      "description": "The controller's return serial for that command: the serial, or\n`error_code * 100 + serial` on a refusal.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "para_type": {
+      "description": "The parameter reply's type (`0` int32, `1` float, `2` string).",
+      "format": "int32",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "para_value_f": {
+      "description": "The parameter reply's float value.",
+      "format": "float",
+      "type": "number"
+     },
+     "para_value_i": {
+      "description": "The parameter reply's integer value.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "protocol": {
+      "description": "`PROTOCOL_*`: the host-to-controller wire generation the daemon\nspeaks (`0` unknown, `1` the first generation, `2` the second\ngeneration).",
+      "format": "int32",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "raw": {
+      "description": "The record as received, `raw_len` bytes, base64.",
+      "type": "string"
+     },
+     "raw_format": {
+      "description": "`RAW_*`: what `raw` holds (`1`: the 1428-byte DCSS record).",
+      "format": "int32",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "raw_len": {
+      "description": "How many bytes of the record `raw` holds.",
+      "format": "int32",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "reserved": {
+      "description": "Zero.",
+      "format": "int32",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "reserved2": {
+      "description": "Zero.",
+      "format": "int32",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "rx_mono_ns": {
+      "description": "`CLOCK_MONOTONIC` nanoseconds when the daemon received the record.",
+      "format": "int64",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "sides": {
+      "description": "Arm A (index 0, the physical left arm) and arm B (index 1).",
+      "items": {
+       "$ref": "#/components/schemas/ArmSideFeedbackRecord"
+      },
+      "type": "array"
+     }
+    },
+    "required": [
+     "contract",
+     "layout_sha256",
+     "header",
+     "rx_mono_ns",
+     "controller_version",
+     "protocol",
+     "flags",
+     "raw_format",
+     "raw_len",
+     "para_type",
+     "para_ins",
+     "para_cmd_serial",
+     "para_ret_serial",
+     "reserved",
+     "para_value_i",
+     "para_value_f",
+     "reserved2",
+     "para_name",
+     "sides",
+     "raw"
+    ],
+    "type": "object"
+   },
+   "ArmLease": {
+    "description": "The published view of the lease, as `POST /v1/arm/lease`,\n`GET /v1/arm/lease` and the `arm.lease` slot of `GET /v1/state` return it.",
+    "properties": {
+     "class": {
+      "$ref": "#/components/schemas/LeaseClass",
+      "description": "The privilege class the holder claimed. A request of a strictly higher\nclass takes these arms away; an equal or lower one is refused."
+     },
+     "epoch": {
+      "description": "Monotonic grant counter, incremented on every FRESH grant and left\nalone by a heartbeat renewal.\n\nThis is what tells a consumer that reads `holder == \"me\"` whether it\nis the same grant it had a moment ago: an unchanged `epoch` means it\nnever lost the arms, while a higher one means it was displaced and\nlater granted them again \u2014 and therefore that whatever it believed\nabout the arms' pose, mode or tool registration is stale.",
+      "format": "int64",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "expires_in_s": {
+      "description": "Whole seconds until the lease expires, rounded up. Once this reaches\nzero the lease is gone: the next caller takes it without asking.",
+      "format": "int64",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "fence": {
+      "description": "The grant's current motion fence: present only for a lease granted\n`fenced`, absent otherwise.\n\nIt starts at 1 on a fresh fenced grant, is kept by a renewal and is\nraised by `POST /v1/arm/lease/fence`. Its presence in the answer to a\nrequest that asked for `fenced` is how a consumer knows that this\ndaemon fences motion.",
+      "format": "int64",
+      "minimum": 0,
+      "type": [
+       "integer",
+       "null"
+      ]
+     },
+     "holder": {
+      "description": "The self-declared name of the consumer holding the arms.",
+      "type": "string"
+     },
+     "preempted_from": {
+      "description": "The holder this lease was taken away from, when it was taken by\npreemption rather than granted freely. `null` for an ordinary grant.\n\nIt survives renewals, because it describes how this grant came about\nand that does not change when the holder heartbeats.",
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "token": {
+      "description": "The grant's token, 16 hexadecimal digits: present only in the answer\nto the holder's own `POST /v1/arm/lease`, and absent from every other\nview of the lease.\n\nA fresh grant draws a new token and a renewal keeps it, exactly as it\nkeeps the epoch. Every command on the shared-memory command path\n(`arm_command.shm/1`) carries it; one whose token is not the live\nlease's is refused. Like the holder's name, it coordinates\ncooperating consumers and is not a credential.",
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "ttl_s": {
+      "description": "The TTL this lease was granted with, in seconds.",
+      "format": "int64",
+      "minimum": 0,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "holder",
+     "ttl_s",
+     "expires_in_s",
+     "class",
+     "epoch"
+    ],
+    "type": "object"
+   },
+   "ArmLeaseRelease": {
+    "description": "`DELETE /v1/arm/lease`: hand the arms back.",
+    "properties": {
+     "holder": {
+      "description": "The holder releasing the lease. Releasing somebody else's lease is\nrefused with 409: a release is a consumer yielding, never a takeover.",
+      "type": "string"
+     }
+    },
+    "required": [
+     "holder"
+    ],
+    "type": "object"
+   },
+   "ArmLeaseRequest": {
+    "description": "`POST /v1/arm/lease`: take, renew, or preempt the arm lease.",
+    "properties": {
+     "class": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "$ref": "#/components/schemas/LeaseClass",
+        "description": "How privileged this request is: `ambient`, `policy` or `operator`.\n**Omitted means `ambient`**, the lowest privilege there is.\n\nThat default is the whole reason this could ship without a flag day.\nEvery consumer that already speaks the lease sends no class, so on the\nday the daemon is upgraded all of them rank lowest and nothing they do\nchanges: no existing caller is silently promoted into a position where\nit can take the arms off a person. Privilege is something a consumer\nopts into, one release at a time, as it is taught what it is \u2014 a\nteleop station or a console claims `operator`, a learned policy claims\n`policy`, and a consumer that needs neither stays correct exactly as\nit is."
+       }
+      ]
+     },
+     "fenced": {
+      "description": "Ask for a **fenced** grant: the answer then carries `fence`, and every\nlease-arbitrated request of this grant must carry `lease_token` and\n`fence` (see `POST /v1/arm/lease/fence`). Omitted or `false` is an\nordinary grant, arbitrated by name exactly as before.\n\nA renewal keeps a fenced grant fenced whatever it sends; a renewal\nthat asks for `fenced` on an unfenced grant of the same holder fences\nit from then on, starting at fence 1.",
+      "type": [
+       "boolean",
+       "null"
+      ]
+     },
+     "holder": {
+      "description": "The consumer's own name, echoed back in every refusal so an operator\ncan see who to ask. Free-form, but use something a human can act on:\n`vr-teleop`, `task-planner`, `console`.",
+      "type": "string"
+     },
+     "ttl_s": {
+      "description": "How long the lease should live, in seconds. Omitted means\n[`DEFAULT_LEASE_TTL_S`]; the accepted range is `1..=600`. Re-POST with\nthe same holder to heartbeat.",
+      "format": "int64",
+      "minimum": 0,
+      "type": [
+       "integer",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "holder"
+    ],
+    "type": "object"
+   },
+   "ArmLimits": {
+    "description": "The arm's joint travel, J1..J7 in SDK order, and both arms' HOME and STOW\nposes.",
+    "properties": {
+     "home_deg": {
+      "$ref": "#/components/schemas/HomePose",
+      "description": "Both arms' HOME pose in degrees: the kit's pose, embedded in the\ndaemon at build time. A consumer reads HOME here rather than keeping\nangles of its own."
+     },
+     "joints": {
+      "description": "Per-joint travel, J1 first. Derived from the embedded `d1.urdf`, so it\nis the same table the motion guard rejects against.",
+      "items": {
+       "$ref": "#/components/schemas/JointLimit"
+      },
+      "type": "array"
+     },
+     "stow_deg": {
+      "$ref": "#/components/schemas/StowPose",
+      "description": "Both arms' STOW (storage) pose in degrees: the kit's pose, compiled\ninto the daemon, arm B mirrored from arm A. A consumer reads STOW here\nrather than keeping angles of its own, and drives the arms there with\n`POST /v1/arm/stow_both`."
+     }
+    },
+    "required": [
+     "joints",
+     "home_deg",
+     "stow_deg"
+    ],
+    "type": "object"
+   },
+   "ArmModeCommand": {
+    "description": "The advertised request body of `POST /v1/arm/{side}/mode`.\n\nThis is a *flattened, advertise-only* view of the tagged\n[`d1fw_core::ArmModeRequest`] enum with the arm lease's optional `holder`\nfolded in as a top-level field. The daemon still deserializes the wire\nbody into `ArmModeRequest` and reads `holder` off it separately (see\n`d1fw_front_rest::lease`); nothing deserializes into this struct. It exists\nonly so the published document describes the body as one flat object.\n\n`openapi-python-client` silently skips any endpoint whose request body is\nan `allOf` containing a `oneOf`, which is exactly what the tagged enum plus\na composed-in `holder` used to emit \u2014 so `POST /v1/arm/{side}/mode`, the\nmost-used arm verb, was missing from every generated Python client. A\nsingle flat object with a `mode` string discriminator and every per-variant\nparameter optional generates cleanly. Which fields are required for a given\n`mode`, and their defaults, are documented on [`d1fw_core::ArmModeRequest`]\nand enforced by the daemon, not by this looser schema.",
+    "properties": {
+     "acc_ratio": {
+      "description": "Acceleration ratio, as a backend-defined normalized ratio\n(`0.0..=1.0`). Used by the same four modes as `vel_ratio`.",
+      "format": "float",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "adjustment_limit_mm": {
+      "description": "`force_compliance`: how far, in millimetres, the controller may\ndisplace the end effector to comply. Must be positive.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "anchor_command_pose": {
+      "description": "`force_compliance`: write the measured pose into the controller's\ncommanded pose before the transition. On by default, unsafe to disable.",
+      "type": [
+       "boolean",
+       "null"
+      ]
+     },
+     "control_params": {
+      "description": "`force_compliance`: force-loop gains and limits; all zeros selects the\ncontroller's built-in defaults.",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": [
+       "array",
+       "null"
+      ]
+     },
+     "damping": {
+      "description": "Joint (`torque`) or Cartesian (`cartesian_impedance`) damping, seven\nentries. Omitted requests the mode's own default.",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": [
+       "array",
+       "null"
+      ]
+     },
+     "eef_rotation": {
+      "description": "`cartesian_impedance`: end-effector rotation parameters forwarded to\nthe controller.",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": [
+       "array",
+       "null"
+      ]
+     },
+     "eef_rotation_type": {
+      "description": "`cartesian_impedance`: end-effector rotation type selector.",
+      "format": "int32",
+      "type": [
+       "integer",
+       "null"
+      ]
+     },
+     "force_direction": {
+      "description": "`force_compliance`: which Cartesian directions (X, Y, Z, Rx, Ry, Rz)\nthe force loop acts on; `1` enables a direction, `0` disables it.",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": [
+       "array",
+       "null"
+      ]
+     },
+     "force_type": {
+      "description": "`force_compliance`: force-control strategy selector.",
+      "format": "int32",
+      "type": [
+       "integer",
+       "null"
+      ]
+     },
+     "holder": {
+      "description": "The arm lease holder issuing this command. Required only while somebody\nholds the lease: with no lease held the field is ignored, and with one\nheld a request whose `holder` does not match is refused with 409.",
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "mode": {
+      "description": "Which arm control mode to enter; selects which of the other fields apply.",
+      "enum": [
+       "idle",
+       "position",
+       "torque",
+       "cartesian_impedance",
+       "force_compliance"
+      ],
+      "type": "string"
+     },
+     "stiffness": {
+      "description": "Joint (`torque`) or Cartesian (`cartesian_impedance`) stiffness, seven\nentries. Omitted requests the mode's own default.",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": [
+       "array",
+       "null"
+      ]
+     },
+     "target_force": {
+      "description": "`force_compliance`: target contact force in newtons. Must not be\nnegative; any positive value is an active push, not a threshold.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "vel_ratio": {
+      "description": "Velocity ratio, as a backend-defined normalized ratio (`0.0..=1.0`).\nUsed by `position`, `torque`, `cartesian_impedance` and\n`force_compliance`.",
+      "format": "float",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "zero_wrist_roll": {
+      "description": "`force_compliance`: command the wrist-roll joint (J7) to zero as part\nof the entry anchor rather than freezing it in place.",
+      "type": [
+       "boolean",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "mode"
+    ],
+    "type": "object"
+   },
+   "ArmSide": {
+    "description": "Selects one of the two physical arms.",
+    "enum": [
+     "a",
+     "b"
+    ],
+    "type": "string"
+   },
+   "ArmSideFeedbackRecord": {
+    "description": "One arm side of one controller feedback record: what the controller\nreported for this side, in its own units and codes (`arm_feedback.shm/1`\n`SideFeedback`).",
+    "properties": {
+     "acc_ratio": {
+      "description": "The joint acceleration ratio in effect, percent.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "accepted_cmd": {
+      "description": "The newest host joint target the controller accepted, degrees.",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "cart_d": {
+      "description": "Cartesian damping in effect (controller unit).",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "cart_dn": {
+      "description": "The null-space damping of the redundant seventh joint.",
+      "format": "float",
+      "type": "number"
+     },
+     "cart_k": {
+      "description": "Cartesian stiffness in effect (controller unit).",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "cart_kd_type": {
+      "description": "The Cartesian stiffness/damping type in effect.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "cart_kn": {
+      "description": "The null-space stiffness of the redundant seventh joint.",
+      "format": "float",
+      "type": "number"
+     },
+     "cmd_echo": {
+      "description": "The joint command the controller echoes on its output side, degrees.",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "cmd_state": {
+      "description": "The controller's command-state word.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "cur_state": {
+      "description": "The controller's current state code (`STATE_*`: 0 idle, 1 position,\n2 PVT, 3 torque, 4 released, 100 error, 101-104 and 109 transitions).",
+      "format": "int32",
+      "type": "integer"
+     },
+     "current": {
+      "description": "The per-joint current (commanded torque) the controller reports\n(controller unit).",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "error_code": {
+      "description": "The controller's error code; `0` while it reports none.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "est_cart_fn": {
+      "description": "The controller's estimated Cartesian force/torque at the tool\n(controller unit).",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "est_force": {
+      "description": "The controller's estimated external joint force (controller unit).",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "est_friction": {
+      "description": "The controller's estimated joint friction (controller unit).",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "est_friction_dot": {
+      "description": "The time derivative of `est_friction`.",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "force_adj_lmt": {
+      "description": "The compliance adjustment limit in effect, millimetres.",
+      "format": "float",
+      "type": "number"
+     },
+     "force_cmd": {
+      "description": "The force command in effect, newtons.",
+      "format": "float",
+      "type": "number"
+     },
+     "force_dir": {
+      "description": "The force-controlled Cartesian directions in effect.",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "force_fb_type": {
+      "description": "The force-feedback type in effect.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "force_pidul": {
+      "description": "The force loop's seven control parameters in effect.",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "force_type": {
+      "description": "The force-control type in effect.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "frame_miss_count": {
+      "description": "Host command frames the controller reckons it did not receive,\nrefreshed every 200 control cycles; healthy below 20.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "imp_type": {
+      "description": "The selected impedance type: `1` joint, `2` Cartesian, `3` force.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "in_frame_serial": {
+      "description": "The serial of the newest host command frame the controller took.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "joint_d": {
+      "description": "Joint damping in effect (controller unit).",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "joint_k": {
+      "description": "Joint stiffness in effect (controller unit).",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "low_speed": {
+      "description": "The controller's low-speed (stationary) flag: nonzero while the arm\nis not moving.",
+      "format": "int32",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "max_frame_miss_count": {
+      "description": "The high-water mark of `frame_miss_count` since the controller\nstarted.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "max_sys_cyc_miss_count": {
+      "description": "The high-water mark of `sys_cyc_miss_count`.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "out_frame_serial": {
+      "description": "The controller's output frame serial.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "pos": {
+      "description": "Measured joint positions, degrees.",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "pos_e": {
+      "description": "The controller's per-joint position error (controller unit).",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "reserved": {
+      "description": "Zero.",
+      "format": "int32",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "sys_cyc": {
+      "description": "The controller's own cycle counter, modulo 1 000 000.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "sys_cyc_miss_count": {
+      "description": "Controller realtime cycles that missed their deadline.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "temperature": {
+      "description": "Joint temperatures, degrees Celsius.",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "tip_di": {
+      "description": "The tool-tip digital inputs.",
+      "format": "int32",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "tool_dyn": {
+      "description": "The tool dynamics registered on the controller: mass (kg), centre of\nmass (mm) and inertia.",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "tool_kine": {
+      "description": "The tool kinematics registered on the controller: TCP translation\n(millimetres) and rotation (degrees).",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "torque": {
+      "description": "The per-joint torque the joint sensors report, newton-metres.",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "traj_state": {
+      "description": "The controller's trajectory state.",
+      "format": "int32",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "vel": {
+      "description": "Measured joint velocities, degrees per second.",
+      "items": {
+       "format": "float",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "vel_ratio": {
+      "description": "The joint velocity ratio in effect, percent.",
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "cur_state",
+     "cmd_state",
+     "error_code",
+     "imp_type",
+     "out_frame_serial",
+     "in_frame_serial",
+     "sys_cyc",
+     "cart_kd_type",
+     "force_fb_type",
+     "force_type",
+     "frame_miss_count",
+     "max_frame_miss_count",
+     "sys_cyc_miss_count",
+     "max_sys_cyc_miss_count",
+     "vel_ratio",
+     "acc_ratio",
+     "tip_di",
+     "low_speed",
+     "traj_state",
+     "reserved",
+     "pos",
+     "vel",
+     "pos_e",
+     "cmd_echo",
+     "current",
+     "torque",
+     "temperature",
+     "est_friction",
+     "est_friction_dot",
+     "est_force",
+     "accepted_cmd",
+     "joint_k",
+     "joint_d",
+     "force_pidul",
+     "est_cart_fn",
+     "cart_k",
+     "cart_d",
+     "force_dir",
+     "tool_kine",
+     "tool_dyn",
+     "cart_kn",
+     "cart_dn",
+     "force_adj_lmt",
+     "force_cmd"
+    ],
+    "type": "object"
+   },
+   "BothJointsRequest": {
+    "description": "`POST /v1/arm/move_joints_both`.",
+    "properties": {
+     "a": {
+      "description": "Arm A target joint angles in degrees, seven joints.",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "b": {
+      "description": "Arm B target joint angles in degrees, seven joints.",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "wait": {
+      "description": "Block until both arms report arrival (up to 30 s).",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "a",
+     "b",
+     "wait"
+    ],
+    "type": "object"
+   },
+   "ChassisLimits": {
+    "description": "The mobile base's remote-drive ceilings and watchdog intervals.",
+    "properties": {
+     "cmd_vel_repeat_ms": {
+      "description": "How often a held velocity is repeated to the base, in ms.",
+      "format": "int64",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "deadman_ms": {
+      "description": "How long a velocity command stays live without a refresh, in ms.",
+      "format": "int64",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "max_angular_rad_s": {
+      "description": "Angular speed ceiling in radians/sec.",
+      "format": "double",
+      "type": "number"
+     },
+     "max_linear_m_s": {
+      "description": "Linear speed ceiling in metres/sec.",
+      "format": "double",
+      "type": "number"
+     }
+    },
+    "required": [
+     "max_linear_m_s",
+     "max_angular_rad_s",
+     "deadman_ms",
+     "cmd_vel_repeat_ms"
+    ],
+    "type": "object"
+   },
+   "ChassisVelocity": {
+    "description": "A chassis velocity command.",
+    "properties": {
+     "omega": {
+      "description": "Angular velocity in radians per second; positive is counter-clockwise.",
+      "format": "double",
+      "type": "number"
+     },
+     "vx": {
+      "description": "Forward velocity in metres per second; negative is reverse.",
+      "format": "double",
+      "type": "number"
+     }
+    },
+    "required": [
+     "vx",
+     "omega"
+    ],
+    "type": "object"
+   },
+   "DaemonMode": {
+    "description": "How this daemon was started.",
+    "enum": [
+     "normal",
+     "diagnostic"
+    ],
+    "type": "string"
+   },
+   "DiagnosticIdentity": {
+    "description": "Which daemon answered, carried beside the failure `GET /v1/health` gives on\na daemon started with `--diagnostic` (the failure envelope's\n`diagnostic`). A consumer that only checks health sees a failure; one that\nwants to know what answered reads this, then `GET /v1/components`.",
+    "properties": {
+     "commit": {
+      "description": "The source commit the daemon was built from, or `null` when the build\nwas not told one.",
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "mode": {
+      "$ref": "#/components/schemas/DaemonMode",
+      "description": "Always `diagnostic`."
+     },
+     "uptime_s": {
+      "description": "Whole seconds since this frontend started serving.",
+      "format": "int64",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "version": {
+      "description": "The daemon's package version.",
+      "type": "string"
+     }
+    },
+    "required": [
+     "mode",
+     "version",
+     "commit",
+     "uptime_s"
+    ],
+    "type": "object"
+   },
+   "EndEffector": {
+    "description": "One side, as `GET /v1/end_effectors` and `GET /v1/end_effectors/{side}`\nanswer it.",
+    "properties": {
+     "available": {
+      "description": "Whether a command on this side can reach its device now. `false`\nfor a side that carries nothing, a declared device that has not answered\nits probe yet, and an out-of-process provider that\nhas not announced itself or has stopped sending its heartbeat; `error`\nthen says which.",
+      "type": "boolean"
+     },
+     "descriptor": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "$ref": "#/components/schemas/EndEffectorDescriptor",
+        "description": "What the driver declares, or `null` for a side that carries nothing."
+       }
+      ]
+     },
+     "error": {
+      "description": "Why the state could not be read, when it could not.",
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "fitted": {
+      "description": "Whether the configuration fits an end effector to this side.",
+      "type": "boolean"
+     },
+     "last_joints_timestamp_us": {
+      "description": "The newest `joints` timestamp accepted on this side, microseconds\nsince the Unix epoch, or `null` before the first one.",
+      "format": "int64",
+      "minimum": 0,
+      "type": [
+       "integer",
+       "null"
+      ]
+     },
+     "product": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "$ref": "#/components/schemas/EndEffectorProduct",
+        "description": "The operator-entered product for this side, independent of its driver."
+       }
+      ]
+     },
+     "side": {
+      "$ref": "#/components/schemas/ArmSide",
+      "description": "The arm side the end effector is bolted to (`a` is the physical LEFT\narm)."
+     },
+     "state": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "$ref": "#/components/schemas/EndEffectorState",
+        "description": "The newest state, or `null` when nothing is fitted or the read failed."
+       }
+      ]
+     }
+    },
+    "required": [
+     "side",
+     "fitted",
+     "available"
+    ],
+    "type": "object"
+   },
+   "EndEffectorCapabilities": {
+    "description": "What one end effector can do, so a client negotiates instead of\nassuming. Every flag is a promise the driver keeps.",
+    "properties": {
+     "clear_fault": {
+      "description": "`clear_fault` is accepted.",
+      "type": "boolean"
+     },
+     "contact_sensing": {
+      "description": "The state reports whether the end effector stopped on an object.",
+      "type": "boolean"
+     },
+     "force_sensing": {
+      "$ref": "#/components/schemas/ForceSensing",
+      "description": "How the force the end effector applies is sensed."
+     },
+     "grip_presets": {
+      "description": "The named grip presets `set` accepts in `grip`; empty when the driver\ntakes no grip.",
+      "items": {
+       "$ref": "#/components/schemas/GripPreset"
+      },
+      "type": "array"
+     },
+     "grip_torque": {
+      "description": "`set` accepts an explicit `torque_nm` grip cap.",
+      "type": "boolean"
+     },
+     "joint_effort": {
+      "description": "The state reports each joint's actuator effort (`joint_efforts`).",
+      "type": "boolean"
+     },
+     "joint_velocity": {
+      "description": "The state reports each joint's velocity (`joint_velocities`).",
+      "type": "boolean"
+     },
+     "joints": {
+      "description": "`joints` is accepted.",
+      "type": "boolean"
+     },
+     "max_command_hz": {
+      "description": "The vendor-rated ceiling on commands and polls together, in hertz,\nwhen the vendor publishes one.",
+      "format": "int32",
+      "minimum": 0,
+      "type": [
+       "integer",
+       "null"
+      ]
+     },
+     "openness": {
+      "description": "`set` with an openness is accepted.",
+      "type": "boolean"
+     },
+     "registers": {
+      "description": "`registers` is accepted.",
+      "type": "boolean"
+     },
+     "set_extra": {
+      "description": "The keys `set` accepts in its driver-scoped `extra` object; empty when\nthe driver takes none. What each key means is the driver's to\ndocument.",
+      "items": {
+       "type": "string"
+      },
+      "type": "array"
+     },
+     "stroke_completion": {
+      "description": "`set` with `wait: true` blocks until the driver's stroke concludes and\nreports a stroke that did not complete as an error. Without it, `wait`\nreturns once the command is on the wire.",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "openness",
+     "joints",
+     "stroke_completion",
+     "grip_presets",
+     "grip_torque",
+     "force_sensing",
+     "contact_sensing",
+     "clear_fault",
+     "registers"
+    ],
+    "type": "object"
+   },
+   "EndEffectorDescriptor": {
+    "description": "What a driver declares about the end effector it drives. Decided by the\nconfiguration and the probe; the one field that changes is `node_id`, from\n`null` to the address a later probe found, once.",
+    "properties": {
+     "capabilities": {
+      "$ref": "#/components/schemas/EndEffectorCapabilities",
+      "description": "What the driver can do."
+     },
+     "detail_schema": {
+      "description": "The schema id (`\"<id>/<major>\"`) the state's `detail` follows, or\n`null` when the driver publishes no detail. A consumer decides what\nto read from a side by its `capabilities` and `joints`, and reads the\ndetail only for a schema id it knows.",
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "driver": {
+      "description": "The driver name the side's provider declares, passed through unread.",
+      "type": "string"
+     },
+     "guard_model": {
+      "description": "The id of the arm-guard envelope this end effector declares, passed\nthrough as the provider names it, or `null` when it declares none.",
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "guard_model_applied": {
+      "description": "The envelope the arm guard checks this side's end effector with:\n`guard_model` when the guard has an envelope of that id, otherwise\nthe guard's default flange envelope (`\"default\"`). A value other than\n`guard_model` means the guard fell back.",
+      "type": "string"
+     },
+     "joints": {
+      "description": "The joints of the `joints` command mode, in command order. Its length\nis the end effector's degrees of freedom.",
+      "items": {
+       "$ref": "#/components/schemas/EndEffectorJoint"
+      },
+      "type": "array"
+     },
+     "model": {
+      "description": "The model the side's provider declares, passed through unread.",
+      "type": "string"
+     },
+     "node_id": {
+      "description": "The bus address the probe found the device at, or `null` while\nnothing has answered \u2014 every command on the side is then refused with\n`unavailable`, and the side is probed again until its device answers.",
+      "format": "int32",
+      "minimum": 0,
+      "type": [
+       "integer",
+       "null"
+      ]
+     },
+     "tool": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "$ref": "#/components/schemas/ToolConfig",
+        "description": "The tool registration the daemon makes on this side's arm for this\nend effector, in the values `POST /v1/arm/{side}/tool` takes, exactly\nas the side's provider declares it; `null` when it declares none, and\nthe daemon then registers nothing for the side. A tool a client\nregisters outranks it until the daemon restarts."
+       }
+      ]
+     }
+    },
+    "required": [
+     "driver",
+     "model",
+     "joints",
+     "capabilities",
+     "guard_model_applied"
+    ],
+    "type": "object"
+   },
+   "EndEffectorDetail": {
+    "description": "A driver's own report: opaque to everything but the consumers of its\nschema.\n\n`schema` identifies the schema `data` follows, as `\"<id>/<major>\"`\n(for example `acme.report/1`). The id is owned by whoever produces\nthe report, an external provider included, and the major changes only\nwhen the data changes incompatibly; a field added to the data keeps it.\nA consumer reads `data` only for a schema id it knows.",
+    "properties": {
+     "data": {
+      "description": "The report, in that schema."
+     },
+     "schema": {
+      "description": "The schema `data` follows, `\"<id>/<major>\"`; the same id the\ndescriptor's `detail_schema` declares.",
+      "type": "string"
+     }
+    },
+    "required": [
+     "schema",
+     "data"
+    ],
+    "type": "object"
+   },
+   "EndEffectorJoint": {
+    "description": "One joint an end effector exposes to the `joints` command mode.",
+    "properties": {
+     "max": {
+      "description": "The largest target accepted, in `unit`.",
+      "format": "double",
+      "type": "number"
+     },
+     "min": {
+      "description": "The smallest target accepted, in `unit`.",
+      "format": "double",
+      "type": "number"
+     },
+     "name": {
+      "description": "The joint's name, unique on this end effector.",
+      "type": "string"
+     },
+     "unit": {
+      "$ref": "#/components/schemas/EndEffectorJointUnit",
+      "description": "The unit targets and readings are in."
+     }
+    },
+    "required": [
+     "name",
+     "unit",
+     "min",
+     "max"
+    ],
+    "type": "object"
+   },
+   "EndEffectorJointUnit": {
+    "description": "The unit one end-effector joint is commanded and reported in.",
+    "enum": [
+     "rad",
+     "fraction"
+    ],
+    "type": "string"
+   },
+   "EndEffectorProduct": {
+    "description": "What the operator entered for one side's end effector.",
+    "properties": {
+     "maker": {
+      "description": "Who makes it (`Acme`).",
+      "type": "string"
+     },
+     "model_number": {
+      "description": "The maker's model number as printed on the unit (`ACME-100`).",
+      "type": "string"
+     },
+     "revision": {
+      "description": "The unit's revision (`V1.2`), a note only; `null` when not entered.",
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "updated_at": {
+      "description": "When it was saved (UTC, RFC 3339), set by the daemon.",
+      "type": "string"
+     },
+     "updated_by": {
+      "description": "Who saved it, `null` when not given.",
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "maker",
+     "model_number",
+     "updated_at"
+    ],
+    "type": "object"
+   },
+   "EndEffectorSetRequest": {
+    "additionalProperties": false,
+    "description": "The body of `POST /v1/end_effectors/{side}/set`.\n\nUnknown fields are refused rather than ignored: a client still sending the\nretired gripper body's `closedness` (whose scale runs the other way), or a\ndriver-specific field outside `extra`, must hear about it, not have the\nfield dropped.",
+    "properties": {
+     "extra": {
+      "description": "Driver-scoped parameters, only the keys the driver lists in its\ncapabilities' `set_extra` (422 otherwise). Their meaning is the\ndriver's own and is documented with the driver. The key\n`force_percent` is such a key, taken by a driver that lists it; sent\nwith the request's own `force_percent`, the two must be equal (422\notherwise).",
+      "type": [
+       "object",
+       "null"
+      ]
+     },
+     "force_percent": {
+      "description": "The grip force, `0` the gentlest the end effector can apply \u2026 `100`\nits maximum, mapped linearly onto the end effector's own force range.\nEvery fitted end effector with openness takes it: one without\nadjustable force applies its fixed force, and a side whose provider\ndoes not take it has it dropped, which `state.grip_force` reports\n(`mode`). Refused (422) when not finite, outside `[0, 100]`, or sent\nwith `grip` or `torque_nm`. Omitted, the grip is what `grip`,\n`torque_nm`, `extra` or the driver's default makes it.",
+      "format": "double",
+      "maximum": 100,
+      "minimum": 0,
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "grip": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "$ref": "#/components/schemas/GripPreset",
+        "description": "A named grip preset, for a driver whose capabilities list it."
+       }
+      ]
+     },
+     "openness": {
+      "description": "`0.0` fully closed \u2026 `1.0` fully open. For a gripper this is its one\nopenness degree of freedom; for a multi-finger hand `1.0` is an open\nhand and `0.0` a fist. Outside `[0, 1]` the request is refused (422).",
+      "format": "double",
+      "type": "number"
+     },
+     "torque_nm": {
+      "description": "An explicit grip cap in newton-metres, for a driver with\n`grip_torque`.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "wait": {
+      "description": "Block until the stroke concludes (default `true`). With `false` the\ncall returns once the target is recorded, and a stroke gripper drives\ntoward the newest target in the background \u2014 the lane a fixed-rate\ncontroller streams into.",
+      "type": [
+       "boolean",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "openness"
+    ],
+    "type": "object"
+   },
+   "EndEffectorState": {
+    "description": "One end effector's dynamic state, in vendor-neutral terms.",
+    "properties": {
+     "cap_reached": {
+      "description": "Whether the newest closing stroke concluded at its force cap, when the\ndriver caps force.",
+      "type": [
+       "boolean",
+       "null"
+      ]
+     },
+     "contact": {
+      "description": "Whether the newest closing stroke stopped on an object, when the\ndriver has contact sensing.",
+      "type": [
+       "boolean",
+       "null"
+      ]
+     },
+     "detail": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "$ref": "#/components/schemas/EndEffectorDetail",
+        "description": "The driver's own report, for what the neutral fields above do not\ncarry, or `null` when the driver has none."
+       }
+      ]
+     },
+     "fault": {
+      "description": "The fault the device reports, or `null` when it reports none.",
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "grip_force": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "$ref": "#/components/schemas/GripForce",
+        "description": "The grip force in effect and how it answers `force_percent`: the\nreport of a provider that takes `force_percent`, or `mode: not_taken`\nfor one that does not. `null` when the side's provider takes\n`force_percent` but published no well-formed report, and for a driver\nthat does not report it. Always present in a daemon that takes\n`force_percent`; an older daemon omits it."
+       }
+      ]
+     },
+     "holding": {
+      "description": "Whether the end effector holds an object, when it can tell.",
+      "type": [
+       "boolean",
+       "null"
+      ]
+     },
+     "joint_efforts": {
+      "description": "The effort each joint's actuator reports, newton-metres for a rotary\nactuator and newtons for a linear one: one entry per entry of\n`joints`, `null` for a joint whose effort is not known, or empty when\nthe driver reports none (`capabilities.joint_effort`).",
+      "items": {
+       "format": "double",
+       "type": [
+        "number",
+        "null"
+       ]
+      },
+      "type": "array"
+     },
+     "joint_velocities": {
+      "description": "Measured joint velocities, in each joint's unit per second: one entry\nper entry of `joints`, `null` for a joint whose velocity is not\nknown, or empty when the driver reports none\n(`capabilities.joint_velocity`).",
+      "items": {
+       "format": "double",
+       "type": [
+        "number",
+        "null"
+       ]
+      },
+      "type": "array"
+     },
+     "joints": {
+      "description": "Measured joint positions in the descriptor's order and units; empty\nwhen the driver has no reading.",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "live": {
+      "description": "Whether the reading was taken for this call, or the newest one a\nrunning command folded, rather than an older cached one.",
+      "type": "boolean"
+     },
+     "openness": {
+      "description": "The driver's estimate of the current openness (`0.0` closed \u2026 `1.0`\nopen), or `null` when it has no reading to estimate from.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "torque_nm": {
+      "description": "The torque the actuator reports, newton-metres, when it reports one.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "tracking": {
+      "description": "Whether a streamed target is being driven toward right now.",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "joints",
+     "live",
+     "tracking"
+    ],
+    "type": "object"
+   },
+   "ErrorEnvelope": {
+    "description": "The failure envelope. `data` is always null; `message` always carries the daemon's own or the mobile base's error text; `kind` is always present and is the stable machine word to branch on; `code` is the mobile base's own numeric response code and is present only when the failure came from the base. Branch on `kind`, never on `message`. `advisory` is present only when the refusal knows the next step, and is absent otherwise. `diagnostic` is present only on the 503 of `GET /v1/health` from a daemon started with `--diagnostic`, and names which daemon answered.",
+    "properties": {
+     "advisory": {
+      "$ref": "#/components/schemas/Advisory"
+     },
+     "code": {
+      "anyOf": [
+       {
+        "format": "int32",
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "The mobile base's numeric response code, or null when the failure did not come from the base."
+     },
+     "data": {
+      "type": "null"
+     },
+     "diagnostic": {
+      "$ref": "#/components/schemas/DiagnosticIdentity"
+     },
+     "kind": {
+      "$ref": "#/components/schemas/ErrorKind"
+     },
+     "message": {
+      "type": "string"
+     },
+     "status": {
+      "const": "error",
+      "type": "string"
+     }
+    },
+    "required": [
+     "status",
+     "data",
+     "message",
+     "kind"
+    ],
+    "title": "ErrorEnvelope",
+    "type": "object"
+   },
+   "ErrorKind": {
+    "description": "A stable machine word for one failure, independent of its wording.\n\nEvery error this daemon returns carries one of these, and a consumer\nbranches on it rather than on the prose in `message`, which is the vendor's\nor the daemon's own sentence and is free to change. The values fall into\ntwo groups: the daemon's own conditions, and the mobile base's, which are\nthe vendor response codes classified into what an operator can do about\nthem.",
+    "enum": [
+     "invalid",
+     "unprocessable",
+     "stale",
+     "settings_conflict",
+     "settings_readback_failed",
+     "kill_latched",
+     "refused",
+     "lease_held",
+     "stale_authority",
+     "abandoned",
+     "device",
+     "unavailable",
+     "timeout",
+     "not_found",
+     "manual_charging",
+     "auto_charging",
+     "dock_unconfigured",
+     "navigation_disabled",
+     "navigation_enabled",
+     "mapping_mode",
+     "remote_control_mode",
+     "remote_control_failed",
+     "manual_mode_required",
+     "mode_not_taken",
+     "hand_drive_blocked",
+     "unauthenticated",
+     "precondition_unmet",
+     "update_in_progress",
+     "ros_unmapped",
+     "vendor"
+    ],
+    "type": "string"
+   },
+   "ForceSensing": {
+    "description": "How an end effector senses the force it applies.",
+    "enum": [
+     "none",
+     "estimated",
+     "measured"
+    ],
+    "type": "string"
+   },
+   "GripForce": {
+    "description": "The grip force in effect on one side, and how it answers\n`force_percent`.",
+    "properties": {
+     "applied_value": {
+      "description": "The force setting in effect, in the device's native `unit`, or `null`\nwhen it is not known.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "approx_newtons": {
+      "description": "The approximate grip force of the value in effect, newtons, when the\nvendor's documentation gives a basis for it; otherwise `null`.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "approx_newtons_range": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "$ref": "#/components/schemas/GripForceRange",
+        "description": "The approximate newtons at `range.min` and `range.max`, on the same\nbasis as `approx_newtons`; otherwise `null`."
+       }
+      ]
+     },
+     "mode": {
+      "$ref": "#/components/schemas/GripForceMode",
+      "description": "Whether `force_percent` is mapped onto an adjustable force, met by a\nfixed one, or not taken by the side's provider."
+     },
+     "range": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "$ref": "#/components/schemas/GripForceRange",
+        "description": "The native values `force_percent` `0` and `100` map to, in `unit`;\n`null` unless `mode` is `adjustable`."
+       }
+      ]
+     },
+     "requested_percent": {
+      "description": "The `force_percent` of the newest `set`, or `null` when the newest\n`set` named none or no `set` has arrived yet.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "unit": {
+      "description": "The unit of `applied_value` and `range`: `percent_of_device_scale`,\n`newton_metre`, `newton`, `milliampere`, `ampere` or\n`permille_of_rated_current`. `null` exactly when both `applied_value`\nand `range` are `null`, so an adjustable end effector reports its unit\nand range before its first `set`.",
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "mode"
+    ],
+    "type": "object"
+   },
+   "GripForceMode": {
+    "description": "How a side's grip force answers `force_percent`.",
+    "enum": [
+     "adjustable",
+     "fixed",
+     "not_taken"
+    ],
+    "type": "string"
+   },
+   "GripForceRange": {
+    "description": "A closed interval of a grip-force quantity.",
+    "properties": {
+     "max": {
+      "description": "The upper end.",
+      "format": "double",
+      "type": "number"
+     },
+     "min": {
+      "description": "The lower end.",
+      "format": "double",
+      "type": "number"
+     }
+    },
+    "required": [
+     "min",
+     "max"
+    ],
+    "type": "object"
+   },
+   "GripPreset": {
+    "description": "A named grip a `set` may ask for.\n\nThe vocabulary is shared by every driver; what force each preset stands\nfor is the driver's own configuration, and a driver lists the presets it\ntakes in [`EndEffectorCapabilities::grip_presets`]. `firm` is what a\ndriver that takes presets applies when a stroke names none.",
+    "enum": [
+     "soft",
+     "firm",
+     "strong"
+    ],
+    "type": "string"
+   },
+   "HomePose": {
+    "description": "Both arms' HOME joint angles, degrees, SDK order J1..J7.\n\nHOME is the kit's pose (manipulation-kit's `config/home_pose.json`,\nembedded in the daemon at build time); the daemon never defines it a\nsecond time.",
+    "properties": {
+     "a": {
+      "description": "Arm A's HOME joint angles in degrees, J1 first (arm A is the physical\nleft arm).",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "b": {
+      "description": "Arm B's HOME joint angles in degrees, J1 first (arm B is the physical\nright arm).",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": "array"
+     }
+    },
+    "required": [
+     "a",
+     "b"
+    ],
+    "type": "object"
+   },
+   "JointLimit": {
+    "description": "One arm joint's travel, in degrees.",
+    "properties": {
+     "max_deg": {
+      "description": "Upper bound in degrees.",
+      "format": "double",
+      "type": "number"
+     },
+     "min_deg": {
+      "description": "Lower bound in degrees.",
+      "format": "double",
+      "type": "number"
+     }
+    },
+    "required": [
+     "min_deg",
+     "max_deg"
+    ],
+    "type": "object"
+   },
+   "JointRequest": {
+    "description": "`POST /v1/arm/{side}/move_joint`.",
+    "properties": {
+     "joint": {
+      "description": "Zero-based joint index, `0..=6`.",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "position": {
+      "description": "Target angle for that joint in degrees.",
+      "format": "double",
+      "type": "number"
+     },
+     "wait": {
+      "description": "Block until the arm reports arrival (up to 30 s).",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "joint",
+     "position",
+     "wait"
+    ],
+    "type": "object"
+   },
+   "JointsRequest": {
+    "description": "`POST /v1/arm/{side}/move_joints`.",
+    "properties": {
+     "joints_deg": {
+      "description": "Target joint angles in degrees, seven joints.",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "wait": {
+      "description": "Block until the arm reports arrival (up to 30 s) rather than\nreturning as soon as the command is accepted.",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "joints_deg",
+     "wait"
+    ],
+    "type": "object"
+   },
+   "LeaseClass": {
+    "description": "How privileged one lease request is, and therefore what it may displace:\n`ambient` (rank 10) < `policy` (50) < `operator` (90).\n\nA request of a strictly higher class than the current holder preempts it;\nan equal class is first-come and a lower one is refused. Three named\nclasses rather than a free integer, because a rank is only useful if two\nconsumers written by two people mean the same thing by it. The numeric\nranks are published for consumers whose own arbiter works in numbers, but\nthe wire form is always the name.",
+    "enum": [
+     "ambient",
+     "policy",
+     "operator"
+    ],
+    "type": "string"
+   },
+   "Limits": {
+    "description": "Every pinned envelope this daemon enforces, in one read.",
+    "properties": {
+     "arm": {
+      "$ref": "#/components/schemas/ArmLimits",
+      "description": "Arm joint travel and the HOME and STOW poses."
+     },
+     "chassis": {
+      "$ref": "#/components/schemas/ChassisLimits",
+      "description": "Mobile-base ceilings."
+     },
+     "neck": {
+      "$ref": "#/components/schemas/NeckLimits",
+      "description": "Neck envelope, home and velocities."
+     },
+     "slider": {
+      "$ref": "#/components/schemas/SliderLimits",
+      "description": "Torso-lift stroke."
+     }
+    },
+    "required": [
+     "neck",
+     "slider",
+     "chassis",
+     "arm"
+    ],
+    "type": "object"
+   },
+   "NeckCommand": {
+    "description": "A neck pose or pose-delta command.",
+    "properties": {
+     "pitch": {
+      "description": "Target or delta pitch in radians; positive is look-up.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "relative": {
+      "description": "Interpret supplied axes as deltas when true.",
+      "type": "boolean"
+     },
+     "velocity": {
+      "description": "Requested speed in radians per second.  `None` selects the core default.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "yaw": {
+      "description": "Target or delta yaw in radians; positive is turn-right.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     }
+    },
+    "type": "object"
+   },
+   "NeckLimits": {
+    "description": "The neck's logical envelope, home pose and velocity ceilings.\n\nLOGICAL frame throughout \u2014 the frame `neck/cmd` takes and `neck/state`\nreports: pitch positive looks UP, yaw positive turns RIGHT. The motor frame\nunderneath (where the sign is inverted and the per-axis direction mapping\nlives) is the backend's and is deliberately not published: nothing outside\nthis daemon writes a motor command, so a consumer that knew the motor frame\ncould only use it to get the mapping wrong.",
+    "properties": {
+     "default_velocity_rad_s": {
+      "description": "Velocity applied when a command names none, in radians/sec.",
+      "format": "double",
+      "type": "number"
+     },
+     "home_pitch_rad": {
+      "description": "Pitch of the home pose in radians.",
+      "format": "double",
+      "type": "number"
+     },
+     "home_yaw_rad": {
+      "description": "Yaw of the home pose in radians.",
+      "format": "double",
+      "type": "number"
+     },
+     "max_velocity_rad_s": {
+      "description": "Velocity ceiling a command is clamped to, in radians/sec.",
+      "format": "double",
+      "type": "number"
+     },
+     "pitch_max_rad": {
+      "description": "Highest commandable pitch in radians (looking up).",
+      "format": "double",
+      "type": "number"
+     },
+     "pitch_min_rad": {
+      "description": "Lowest commandable pitch in radians (looking down).",
+      "format": "double",
+      "type": "number"
+     },
+     "yaw_max_rad": {
+      "description": "Highest commandable yaw in radians (turned right).",
+      "format": "double",
+      "type": "number"
+     },
+     "yaw_min_rad": {
+      "description": "Lowest commandable yaw in radians (turned left).",
+      "format": "double",
+      "type": "number"
+     }
+    },
+    "required": [
+     "pitch_min_rad",
+     "pitch_max_rad",
+     "yaw_min_rad",
+     "yaw_max_rad",
+     "home_pitch_rad",
+     "home_yaw_rad",
+     "default_velocity_rad_s",
+     "max_velocity_rad_s"
+    ],
+    "type": "object"
+   },
+   "NeckState": {
+    "description": "Neck feedback in the logical robot frame.",
+    "properties": {
+     "enabled": {
+      "description": "Whether the neck motors are enabled.",
+      "type": "boolean"
+     },
+     "moving": {
+      "description": "Whether either neck axis is moving.\n\nThe backend's own answer, taken from the same feedback frames as the\nvelocities beside it: an axis is moving when its measured velocity\nexceeds what the motor's feedback can express, which is the wire's\nresolution rather than a chosen threshold. A neck creeping below that\nresolution reads `false`; nothing on this wire can tell it apart from\na standing motor. See [`crate::Motion`], which folds this into the\nwhole-robot answer.",
+      "type": "boolean"
+     },
+     "pitch": {
+      "description": "Current pitch in radians.",
+      "format": "double",
+      "type": "number"
+     },
+     "pitch_coil_temperature_c": {
+      "description": "The pitch motor's coil (winding) temperature in degrees Celsius;\n`null` when the backend has none.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "pitch_mos_temperature_c": {
+      "description": "The pitch motor's MOSFET (drive) temperature in degrees Celsius, as\nits status feedback reports it; `null` when the backend has none.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "pitch_torque": {
+      "description": "Measured pitch torque in newton-metres.",
+      "format": "double",
+      "type": "number"
+     },
+     "pitch_velocity": {
+      "description": "Current pitch velocity in radians per second.",
+      "format": "double",
+      "type": "number"
+     },
+     "yaw": {
+      "description": "Current yaw in radians.",
+      "format": "double",
+      "type": "number"
+     },
+     "yaw_coil_temperature_c": {
+      "description": "The yaw motor's coil (winding) temperature in degrees Celsius; `null`\nwhen the backend has none.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "yaw_mos_temperature_c": {
+      "description": "The yaw motor's MOSFET (drive) temperature in degrees Celsius; `null`\nwhen the backend has none.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "yaw_torque": {
+      "description": "Measured yaw torque in newton-metres.",
+      "format": "double",
+      "type": "number"
+     },
+     "yaw_velocity": {
+      "description": "Current yaw velocity in radians per second.",
+      "format": "double",
+      "type": "number"
+     }
+    },
+    "required": [
+     "pitch",
+     "yaw",
+     "pitch_velocity",
+     "yaw_velocity",
+     "moving",
+     "pitch_torque",
+     "yaw_torque",
+     "enabled",
+     "pitch_mos_temperature_c",
+     "yaw_mos_temperature_c",
+     "pitch_coil_temperature_c",
+     "yaw_coil_temperature_c"
+    ],
+    "type": "object"
+   },
+   "SliderHardwareLimits": {
+    "description": "The HARDWARE side of the torso lift's limits: what the drive itself holds\nand acts on, every value read back from the drive.\n\nThe lift's constraints have two sides, kept under separate names because\nthey may legitimately hold different values and one is never derived from\nthe other. The SOFTWARE side is [`SliderTravelLimits`]\n(`slider/state.travel_limits`): the ranges this daemon records and checks\na move against before anything reaches the drive. This is the other one:\non the D1's LD2-RS, the drive's own position limits \u2014 the positive limit\nin `0x6006`:`0x6007` and the negative limit in `0x6008`:`0x6009`, signed\n32-bit pulse counts measured from the drive's origin, in force while\n`Pr8.00` (`0x6000`) bit 1 is set \u2014 and the two settings that decide\nwhether the drive keeps its origin across a power cycle. The vendor's\ndocumentation calls the drive's limits \"software limits\" because the\ndrive's firmware enforces them rather than a limit switch; in this API\nthey are HARDWARE, because the drive holds and enforces them.\n\nRead when the daemon connects to the drive and again after every daemon\nwrite to them (`set_zero`, `set_hardware_limits`), and cached in between,\nbecause they change only when written and the link runs at 9600 baud. A\nfield is `null` when the drive has not answered a reading of it. A\nbackend whose drive has no limit registers publishes\n`limit_registers: false`; its hardware side is its origin alone.",
+    "properties": {
+     "limit_enabled": {
+      "description": "HARDWARE: whether the drive's position limits are in force: `Pr8.00`\nbit 1 as read from the drive. `set_zero` turns it off (the limits are\npulse counts from the origin it replaces); `set_hardware_limits`\nturns it on.",
+      "type": [
+       "boolean",
+       "null"
+      ]
+     },
+     "limit_registers": {
+      "description": "HARDWARE: whether this drive has position-limit registers the daemon\ncan write and read back. `true` for the D1's LD2-RS.",
+      "type": "boolean"
+     },
+     "lower_m": {
+      "description": "HARDWARE: the drive's negative position limit (`0x6008`:`0x6009`), in\nmetres from the drive's origin.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "lower_pulses": {
+      "description": "HARDWARE: the drive's negative position limit as the raw signed pulse\ncount it holds.",
+      "format": "int32",
+      "type": [
+       "integer",
+       "null"
+      ]
+     },
+     "origin": {
+      "$ref": "#/components/schemas/SliderHardwareOrigin",
+      "description": "HARDWARE: the drive's origin settings, as the drive holds them."
+     },
+     "upper_m": {
+      "description": "HARDWARE: the drive's positive position limit (`0x6006`:`0x6007`), in\nmetres from the drive's origin.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "upper_pulses": {
+      "description": "HARDWARE: the drive's positive position limit as the raw signed pulse\ncount it holds.",
+      "format": "int32",
+      "type": [
+       "integer",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "limit_registers",
+     "limit_enabled",
+     "lower_m",
+     "upper_m",
+     "lower_pulses",
+     "upper_pulses",
+     "origin"
+    ],
+    "type": "object"
+   },
+   "SliderHardwareOrigin": {
+    "description": "The HARDWARE side's origin: the two drive settings that decide whether the\ndrive keeps the zero `set_zero` wrote across a power cycle.",
+    "properties": {
+     "abs_encoder_setting": {
+      "description": "HARDWARE: `Pr0.15` (`0x001F`), the absolute-encoder setting, as read\nfrom the drive. `1` is multi-turn absolute; `3` is the PR-only\nzero-position-memory mode `set_zero` leaves the drive in.",
+      "format": "int32",
+      "minimum": 0,
+      "type": [
+       "integer",
+       "null"
+      ]
+     },
+     "position_memory": {
+      "description": "HARDWARE: `Pr8.00` bit 3, absolute position memory, as read from the\ndrive: whether the position survives a power cycle.",
+      "type": [
+       "boolean",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "abs_encoder_setting",
+     "position_memory"
+    ],
+    "type": "object"
+   },
+   "SliderLimits": {
+    "description": "The torso lift's stroke.",
+    "properties": {
+     "max_height_m": {
+      "description": "Upper stop in metres.",
+      "format": "double",
+      "type": "number"
+     },
+     "min_height_m": {
+      "description": "Lower stop in metres; the origin heights are measured from.",
+      "format": "double",
+      "type": "number"
+     },
+     "travel_pulses": {
+      "description": "The whole stroke in drive pulses.",
+      "format": "int32",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "min_height_m",
+     "max_height_m",
+     "travel_pulses"
+    ],
+    "type": "object"
+   },
+   "SliderMove": {
+    "description": "A requested slider move: one absolute height, or one small relative\namount.\n\nExactly one of `height_m` and `delta_m` is given. Neither and both are\nboth rejected with `400` rather than resolved by a precedence rule: a\ncaller that sent two targets did not mean one of them, and a caller that\nsent none named no move at all.\n\n`delta_m` is the commissioning form. It is admitted only on a daemon\nstarted with `[slider] commissioning = true`, it is capped at\n[`crate::safety::SLIDER_COMMISSIONING_STEP_MAX_M`] per call, and it runs\nat the commissioning floor\n[`crate::safety::SLIDER_COMMISSIONING_SPEED_RATIO`] unless `speed_ratio`\nnames a speed at or above that floor (a lower one is `400`). It is on\nthis verb rather than on a new one because on the LD2-RS's wire the two\nare the same PR path write with a different mode word (`0x0041` instead\nof `0x0001`), so a separate verb would have been a second name for one\noperation.",
+    "properties": {
+     "delta_m": {
+      "description": "A small relative amount in metres, measured from where the carriage\nstands now; negative is down. Commissioning only.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "height_m": {
+      "description": "Absolute target height in metres, measured from the drive's origin.\n\nOptional in the schema only because `delta_m` is the alternative; a\nbody carrying neither is refused.",
+      "format": "double",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "speed_ratio": {
+      "description": "Optional move speed as a normalized ratio in `0.0..=1.0`: a fraction of\nthe slider's full speed, the same convention the arm's `vel_ratio`\nuses (a fraction of full speed, never a percentage). `None` (the field\nabsent from the request body) keeps the backend's default speed, so an\nexisting caller is unchanged. Out-of-range values are rejected with\n`400`. With `delta_m` it is the commissioning step's speed: absent, the\nstep runs at the commissioning floor (`0.05`); present, it must be at or\nabove that floor, and a lower value is rejected with `400` rather than\nraised to it.",
+      "format": "float",
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "wait": {
+      "description": "Wait for the backend to report completion when true.",
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "wait"
+    ],
+    "type": "object"
+   },
+   "SliderMultiturnRecovery": {
+    "description": "What the drive's multi-turn initialisation (`Pr0.15 := 9`) read, before\nand after it: the answer of `recover_multiturn`, and part of the answer\nof a `set_zero` that ran it.\n\nEr153 (alarm `0x153`, decimal 339) is the LD2-RS7015's multi-turn encoder\nbattery error: the absolute position is lost. A drive taken into\nmulti-turn absolute mode without this initialisation shows Er153 at its\nnext power-up. The drive vendor's procedure runs it only on a drive in\nEr153, never as a routine part of a zero; `set_zero` runs it there and\nalso on a new drive right after taking it from incremental mode into\nabsolute mode for the first time (such a drive cannot show Er153 before\nits first power cycle in absolute mode), and `recover_multiturn` runs\nit alone on a drive in Er153. It follows the\ndrive vendor's procedure for this drive: stop\n(`0x6002 = 0x0040`), servo off (`0x0405 = 3`), the carriage confirmed\nstill, `0x001F = 9`, and within about 3 s `0x001F` back at `1` by itself\nand `0x2203` reading 0. The initialisation does not make the position 0\n(only the multi-turn count is cleared), so both positions are published;\nthe old coordinate is not trusted afterwards and nothing is derived from\nit.",
+    "properties": {
+     "abs_encoder_setting_after": {
+      "description": "`Pr0.15` (`0x001F`) as read when the initialisation completed: `1`,\nthe value the drive puts back by itself.",
+      "format": "int32",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "alarm_code_after": {
+      "description": "The alarm register, masked to 12 bits, when the initialisation\ncompleted: `0`.",
+      "format": "int32",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "alarm_code_before": {
+      "description": "The alarm register (`0x2203`), masked to 12 bits, when the\ninitialisation began: `0x153` (339) on a drive in Er153, `0` on a new\ndrive `set_zero` took into absolute mode.",
+      "format": "int32",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "position_after_pulses": {
+      "description": "The position in pulses where the carriage rested after the\ninitialisation. Not 0: the initialisation keeps the single-turn part.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "position_before_pulses": {
+      "description": "The position (`0x602C`:`0x602D`) in pulses where the carriage rested\nafter the stop and the servo-off, before the initialisation.",
+      "format": "int32",
+      "type": "integer"
+     },
+     "returned_after_ms": {
+      "description": "Milliseconds from the `0x001F = 9` write to the read that found\n`0x001F = 1` and no alarm.",
+      "format": "int64",
+      "minimum": 0,
+      "type": "integer"
+     }
+    },
+    "required": [
+     "alarm_code_before",
+     "position_before_pulses",
+     "position_after_pulses",
+     "abs_encoder_setting_after",
+     "alarm_code_after",
+     "returned_after_ms"
+    ],
+    "type": "object"
+   },
+   "SliderState": {
+    "description": "Slider feedback.",
+    "properties": {
+     "abs_encoder_setting": {
+      "description": "The raw `Pr0.15` absolute-encoder setting the decision was made from,\nor `null` when the drive has not answered a reading of it. `1`\n(multi-turn absolute enabled) is commissioned; `3` (clear\nposition-memory mode, where `set_zero` leaves a drive without\nmulti-turn absolute) is commissioned when `pr_control_setting` has\nbit 3 set; anything else is not.\n\nPublished because `zero_reference: \"unknown\"` is otherwise a verdict\nwith no evidence: this field, `pr_control_setting` and `height_m` are\nthe readings that produced it.",
+      "format": "int32",
+      "minimum": 0,
+      "type": [
+       "integer",
+       "null"
+      ]
+     },
+     "advisory": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "$ref": "#/components/schemas/Advisory",
+        "description": "An INFO-level suggestion about the origin above, when it earns one.\n\nAdditive and absent when it does not, so a consumer that has never\nheard of it reads exactly the state it always read. A commissioned\nand verified lift never carries one. See [`crate::slider_advisory`]."
+       }
+      ]
+     },
+     "alarm": {
+      "description": "Whether the slider reports an alarm (the drive's current-alarm\nregister `0x2203` is non-zero).\n\nA carriage driven into its mechanical bottom stalls: the drive raises\nan alarm, stops, and takes no further motion until the alarm is\ncleared with `POST /v1/slider/reset_alarm`. Which code the D1's LD2-RS\nraises for that stall has not been recorded on a robot; read it from\n`alarm_code` and `alarm_text` rather than assuming one.",
+      "type": "boolean"
+     },
+     "alarm_code": {
+      "description": "The masked 12-bit raw alarm register value (see\n`d1fw_proto_slider::AlarmCode`). `0` when the drive reports no alarm,\nand also `0` when `comms_ok` is false since a failed read carries no\ntrustworthy register content.",
+      "format": "int32",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "alarm_text": {
+      "description": "Human-readable alarm text.",
+      "type": "string"
+     },
+     "availability_reason": {
+      "description": "The bring-up error while `available` is `false`; `null` otherwise.",
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "available": {
+      "description": "Whether the daemon has the lift at all.\n\n`false` means the lift controller could not be brought up when the\ndaemon started (serial device missing, no answer, a frame that would\nnot parse): every lift verb then refuses with `kind: unavailable`, the\nrest of the robot is served as usual, and the daemon keeps retrying in\nthe background \u2014 this flips to `true` without a restart once the lift\nanswers. `comms_ok` is then `false` too, and `availability_reason`\ncarries the error. Distinct from `comms_ok: false` with `available:\ntrue`, which is a lift that is up but whose last reading failed.",
+      "type": "boolean"
+     },
+     "comms_ok": {
+      "description": "Whether communications with the slider are healthy.",
+      "type": "boolean"
+     },
+     "hardware_limits": {
+      "$ref": "#/components/schemas/SliderHardwareLimits",
+      "description": "The HARDWARE side of the lift's limits: the drive's own position\nlimits and origin settings, read back from the drive. See\n[`SliderHardwareLimits`]. Filled by the backend, which is the only\nthing that can read the drive."
+     },
+     "height_m": {
+      "description": "Current height in metres.",
+      "format": "double",
+      "type": "number"
+     },
+     "moving": {
+      "description": "Whether the slider is moving.",
+      "type": "boolean"
+     },
+     "multiturn_lost": {
+      "description": "Whether the drive's alarm is Er153 (`alarm_code` `0x153`, decimal\n339): the multi-turn encoder's battery error, absolute position lost.\n\n`reset_alarm` does not clear it. `POST /v1/slider/recover_multiturn`\nrecovers it, and so does `POST /v1/slider/set_zero`, whose first part\non such a drive is the drive vendor's multi-turn initialisation\n(`Pr0.15 := 9`), before it sets the zero where the carriage stands;\nevery other alarm still refuses `set_zero`.",
+      "type": "boolean"
+     },
+     "multiturn_recovery": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "$ref": "#/components/schemas/SliderMultiturnRecovery",
+        "description": "What `set_zero` read during its multi-turn initialisation, present\nonly in the answer of a `set_zero` that ran one: on a drive in Er153,\nor on a new drive it took into absolute mode for the first time. See\n[`SliderMultiturnRecovery`]. Absent from every other state."
+       }
+      ]
+     },
+     "pr_control_setting": {
+      "description": "The raw `Pr8.00` PR control settings (register `0x6000`), or `null`\nwhen the drive has not answered a reading of it. Bit 3 is absolute\nposition memory (the position survives a power cycle), bit 2 homing at\npower-on, bit 1 the drive's own position limits (the HARDWARE side,\n`hardware_limits`; the vendor's documentation calls them \"software\nlimits\" because the drive's firmware enforces them).",
+      "format": "int32",
+      "minimum": 0,
+      "type": [
+       "integer",
+       "null"
+      ]
+     },
+     "travel_limits": {
+      "$ref": "#/components/schemas/SliderTravelLimits",
+      "description": "The SOFTWARE side of the lift's limits: every range this daemon\nrecords and enforces, and the range they come to together \u2014 the one\n`set_height` admits. The drive's own limits are `hardware_limits`.\n\nAdditive to `travel_max_m`, which is unchanged and still the model\nceiling: `travel_limits.model.upper_m` is the same number. A console\nthat reads only `travel_max_m` keeps working and simply does not know\nabout a unit calibration narrower than the model.\n\nLike `zero_verification` and `advisory`, this is filled where the\ndaemon hands the state out ([`crate::D1::slider_state`] and the\n`/v1/state` snapshot) rather than by the backend: the unit layer\nlives in the daemon's own state file, which no device can read. A\nstate taken straight from a device therefore carries the model layer\nalone."
+     },
+     "travel_max_m": {
+      "description": "SOFTWARE side: the upper bound of the model travel in metres, the\nhighest `height_m` a move may target. Sourced from the daemon's `[slider]\ntravel_max_m` configuration (default `0.30` on a D1) so a console can\npresent the real limit instead of hardcoding one. The lower bound is\nalways `0.0` (the homed position), so no separate minimum is\npublished. Carried even when `comms_ok` is false, since it is a\nconfigured fact rather than a live reading.",
+      "format": "double",
+      "type": "number"
+     },
+     "zero_reference": {
+      "$ref": "#/components/schemas/ZeroReference",
+      "description": "Whether the drive's zero is plausibly the commissioned one. `unknown`\nmeans `set_height` and `home` are refused with `409` until the\ncommissioning procedure has been run \u2014 see [`ZeroReference`]."
+     },
+     "zero_verification": {
+      "$ref": "#/components/schemas/ZeroVerification",
+      "description": "Whether the origin this daemon last wrote has been read back across a\npower cycle. See [`ZeroVerification`]."
+     }
+    },
+    "required": [
+     "availability_reason",
+     "comms_ok",
+     "height_m",
+     "moving",
+     "alarm",
+     "alarm_text",
+     "alarm_code",
+     "travel_max_m",
+     "zero_reference"
+    ],
+    "type": "object"
+   },
+   "SliderTravelLimits": {
+    "description": "The SOFTWARE side of the torso lift's limits: every range this daemon\nrecords and enforces itself, before anything reaches the drive, and what\nthey come to together. The drive's own limits are the HARDWARE side,\n[`SliderHardwareLimits`], kept apart because the two may legitimately hold\ndifferent values.\n\nThe layers exist because \"how high can this lift go\" has more than one\nanswer and an operator needs to know WHICH one stopped a move. The model\nceiling is what a D1's lift is; the unit calibration is what this\nparticular machine's jig, cabling and mechanical build turned out to\nallow, measured on a bench and recorded in the daemon's state file.\n\nA layer only ever NARROWS: a unit calibration that claimed more travel\nthan the model has is refused when it is recorded, so `effective` can\nnever be wider than `model`.",
+    "properties": {
+     "effective": {
+      "$ref": "#/components/schemas/SliderTravelRange",
+      "description": "SOFTWARE: the intersection of every layer above: the range the daemon\nenforces on `set_height` and `home`, by direction (see\n[`SliderTravelRange::admits_move`])."
+     },
+     "model": {
+      "$ref": "#/components/schemas/SliderTravelRange",
+      "description": "SOFTWARE: what the model allows, `[0, travel_max_m]` from `[slider]\ntravel_max_m` in the daemon's configuration."
+     },
+     "unit": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "$ref": "#/components/schemas/SliderTravelRange",
+        "description": "SOFTWARE: the range `POST /v1/slider/set_limits` recorded for this\nrobot in the daemon's state file, or `null` when none has been\nrecorded."
+       }
+      ]
+     }
+    },
+    "required": [
+     "model",
+     "effective"
+    ],
+    "type": "object"
+   },
+   "SliderTravelRange": {
+    "description": "One closed interval of lift travel in metres.",
+    "properties": {
+     "lower_m": {
+      "description": "The lowest height this layer admits.",
+      "format": "double",
+      "type": "number"
+     },
+     "upper_m": {
+      "description": "The highest height this layer admits.",
+      "format": "double",
+      "type": "number"
+     }
+    },
+    "required": [
+     "lower_m",
+     "upper_m"
+    ],
+    "type": "object"
+   },
+   "StowPose": {
+    "description": "Both arms' STOW joint angles, degrees, SDK order J1..J7.\n\nSTOW is the storage pose: an endpoint the arms are parked in, not a\ngesture. It is the manipulation-kit's pose at commit `ce802ad`; the\nstraight joint-space path from HOME to STOW was guard-clean in 101 of 101\nruns. Arm B is arm A mirrored (J1, J3, J5 and J7 change sign).",
+    "properties": {
+     "a": {
+      "description": "Arm A's STOW joint angles in degrees, J1 first (arm A is the physical\nleft arm).",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "b": {
+      "description": "Arm B's STOW joint angles in degrees, J1 first (arm B is the physical\nright arm): arm A's angles mirrored.",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": "array"
+     }
+    },
+    "required": [
+     "a",
+     "b"
+    ],
+    "type": "object"
+   },
+   "SuggestedAction": {
+    "description": "The one call an advisory suggests, as a frontend-independent verb and\npath.\n\nThe REST route is what is published because it is the one form every\nfrontend can be derived from: the WebSocket method for an arm's recover\npath is `arm.{side}.recover`, and the mapping between the two is already\n[`crate::API_MAP`].",
+    "properties": {
+     "method": {
+      "description": "The HTTP method, uppercase.",
+      "type": "string"
+     },
+     "path": {
+      "description": "The REST path, with any side already substituted.",
+      "type": "string"
+     }
+    },
+    "required": [
+     "method",
+     "path"
+    ],
+    "type": "object"
+   },
+   "ToolConfig": {
+    "description": "Tool-center-point and dynamics configuration for one arm.",
+    "properties": {
+     "com_mm": {
+      "description": "Centre of mass in millimetres, XYZ.",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "inertia": {
+      "description": "Inertia tensor components in the backend's six-value order.",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "mass_kg": {
+      "description": "Tool mass in kilograms.",
+      "format": "double",
+      "type": "number"
+     },
+     "tcp_rpy_deg": {
+      "description": "TCP rotation in degrees, roll/pitch/yaw.",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": "array"
+     },
+     "tcp_xyz_mm": {
+      "description": "TCP translation in millimetres, XYZ.",
+      "items": {
+       "format": "double",
+       "type": "number"
+      },
+      "type": "array"
+     }
+    },
+    "required": [
+     "tcp_xyz_mm",
+     "tcp_rpy_deg",
+     "mass_kg",
+     "com_mm",
+     "inertia"
+    ],
+    "type": "object"
+   },
+   "WsRequest": {
+    "description": "One request frame sent by a WebSocket client.",
+    "properties": {
+     "id": {
+      "description": "Caller-chosen correlation identifier, echoed in the response.\n\nResponses can arrive out of order (see [`WsResponse`]), so this is the\nonly way to match a response to its request.",
+      "format": "int64",
+      "minimum": 0,
+      "type": "integer"
+     },
+     "method": {
+      "description": "The `x-ws-method` value of the operation to call, for example\n`arm.a.move_joints`.  Side-templated operations are spelled with a\nconcrete side: `arm.a.mode`, never `arm.{side}.mode`.",
+      "type": "string"
+     },
+     "params": {
+      "description": "The operation's request body, as an object.  Omitted means `{}`."
+     }
+    },
+    "required": [
+     "id",
+     "method"
+    ],
+    "type": "object"
+   },
+   "WsResponse": {
+    "description": "One response frame, carrying the same payload the REST envelope would.\n\n**Responses are not ordered.**  Each request is dispatched on its own\ntask, so a long motion call never delays another request on the same\nconnection and a later request can answer first.  Correlate by `id`, never\nby arrival order.",
+    "properties": {
+     "code": {
+      "description": "The mobile base's own numeric response code, when the failure came\nfrom the base. Null on a failure raised by the daemon itself, and\nabsent from a success frame, which carries the three fields it has\nalways carried.\n\nThe same field the REST failure envelope carries, so a consumer that\nspeaks both frontends branches on one vocabulary.",
+      "format": "int32",
+      "type": [
+       "integer",
+       "null"
+      ]
+     },
+     "data": {
+      "description": "The operation's result on success, null on error.  This is the same\npayload as the REST envelope's `data` for the same method."
+     },
+     "diagnostic": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "$ref": "#/components/schemas/DiagnosticIdentity",
+        "description": "Which daemon answered; the same object the REST failure envelope\ncarries. Present only on the failure frame of `health` from a daemon\nstarted with `--diagnostic`, and absent from every other frame."
+       }
+      ]
+     },
+     "id": {
+      "description": "The `id` of the request this answers, or null when the frame could not\nbe parsed far enough to recover one.",
+      "format": "int64",
+      "minimum": 0,
+      "type": [
+       "integer",
+       "null"
+      ]
+     },
+     "kind": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "$ref": "#/components/schemas/ErrorKind",
+        "description": "The stable machine word for the failure; absent from a success frame.\n\nBranch on this rather than on `message`, which is the daemon's or the\nmobile base's own sentence and is free to change."
+       }
+      ]
+     },
+     "message": {
+      "description": "The failure reason on error, null on success.",
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "slowed": {
+      "oneOf": [
+       {
+        "type": "null"
+       },
+       {
+        "$ref": "#/components/schemas/ApproachSlowing",
+        "description": "How the approach limiter slowed a streamed `arm.move_joints_both`;\nthe same object the REST success envelope carries. Present only on\na success frame of that method whose written pose is not the pose\nsent, and absent from every other frame."
+       }
+      ]
+     },
+     "status": {
+      "$ref": "#/components/schemas/WsStatus",
+      "description": "Whether the call succeeded."
+     }
+    },
+    "required": [
+     "status",
+     "data"
+    ],
+    "type": "object"
+   },
+   "WsStatus": {
+    "description": "The `status` field of a [`WsResponse`].",
+    "enum": [
+     "ok",
+     "error"
+    ],
+    "type": "string"
+   },
+   "ZeroReference": {
+    "description": "Whether the torso lift's drive origin is the one it was commissioned with.\n\nThe LD2-RS keeps its zero in the absolute encoder, and every height this\ndaemon accepts is measured from it. A drive that has lost that zero \u2014 a new\ndrive, an EEPROM that did not survive, a swapped motor \u2014 still answers\nevery register read: it simply calls some other place \"0 m\". A move to 0 m\nagainst such an origin drives the lift into its mechanical stop.\n\nSo the origin is a published fact rather than an assumption, decided from\ntwo readings the drive itself supplies: `Pr0.15` (the absolute-encoder\nsetting, which must be \"multi-turn absolute enabled\") and the current\nposition, which on a commissioned drive has to lie inside the usable\ntravel. See `d1fw_backends::slider::zero_reference`.",
+    "enum": [
+     "commissioned",
+     "unknown"
+    ],
+    "type": "string"
+   },
+   "ZeroVerification": {
+    "description": "Whether a zero that was written has been proved to have survived a power\ncycle.\n\nSeparate from [`ZeroReference`] on purpose, and additive to it: the two\nanswer different questions and a consumer that only knows the older one\nkeeps reading exactly what it read. `zero_reference` asks \"can the drive\nvouch for its origin right now\", which is decided from live readings.\nThis asks \"has the origin this daemon last wrote been read back after the\npower was removed\", which no live reading can answer \u2014 it is a fact about\nhistory, so it lives in the daemon's state file.\n\nIt matters because the LD2-RS reports its EEPROM save as taken (`0x5555`)\nbefore anything has proved the parameter is still there after power is\nremoved, and an origin that lived in RAM only is precisely the failure\n`set_zero` exists to prevent.",
+    "enum": [
+     "unrecorded",
+     "pending",
+     "verified"
+    ],
+    "type": "string"
+   }
+  }
+ },
+ "x-vendored": {
+  "source": "D1 robot daemon OpenAPI document (openapi/d1-firmwared.v1.json)",
+  "commit": "0b935623ddfca6a948cb491b75512992cee2f41b",
+  "operations": [
+   "POST /v1/arm/{side}/mode",
+   "POST /v1/arm/{side}/move_joint",
+   "POST /v1/arm/{side}/move_joints",
+   "POST /v1/arm/move_joints_both",
+   "POST /v1/arm/{side}/estop",
+   "POST /v1/end_effectors/{side}/set",
+   "POST /v1/end_effectors/{side}/stop",
+   "POST /v1/slider/set_height",
+   "POST /v1/neck/cmd",
+   "POST /v1/chassis/cmd_vel",
+   "GET /v1/limits",
+   "GET /v1/arm/feedback",
+   "GET /v1/end_effectors",
+   "GET /v1/slider/state",
+   "GET /v1/neck/state",
+   "GET /v1/chassis/amr/localization",
+   "GET /v1/arm/lease",
+   "POST /v1/arm/lease",
+   "DELETE /v1/arm/lease"
+  ],
+  "schemas": [
+   "WsRequest",
+   "WsResponse"
+  ]
+ }
+}

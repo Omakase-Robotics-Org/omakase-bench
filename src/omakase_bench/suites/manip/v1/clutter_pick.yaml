@@ -1,0 +1,41 @@
+id: manip/clutter_pick
+version: 1.1.0
+title: Pick from a packed row
+status: draft
+interfaces: [ee, scripted]
+instruction: "{goal}"
+scene:
+  robot: {preset: d1, base: [0, 0, 0], lift: 0.15, neck: {pan: 0.0, tilt: 0.65}}
+  fixtures:
+    - {name: table, type: box, size: [0.60, 1.00, 0.75], pos: [0.63, 0.0, 0.375], color: wood, label: table}
+  cameras:
+    showcase: {pos: [1.20, -0.50, 1.38], lookat: [0.38, 0.0, 0.86], fovy: 45}
+    top: {pos: [0.45, 0.0, 1.9], lookat: [0.45, 0.0, 0.75], fovy: 40}
+# The pads are 18 mm thick and 21 mm wide, so in a packed row the jaws only fit across the row:
+# the gripper has to turn a quarter, and each arm reaches the quarter turn towards its own side.
+generator: omakase_bench.tasks.manipulation.tabletop.generators:clutter_pick
+params:
+  colours: [red, blue, green, yellow, purple, orange]
+  count: [4, 6]
+  gap: [0.006, 0.012]
+  x: [0.38, 0.42]
+  y_abs: 0.17                   # centre of the row
+  radius: [0.015, 0.018]
+  height: [0.05, 0.07]
+  lift: 0.10
+  max_other_displacement: 0.020
+success: {goal: "omakase_bench.tasks.manipulation.tabletop.generators:clutter_pick_ok"}
+ee:
+  # what the task demands beyond the episode's goal sentence
+  rules: >-
+    Pick the named cylinder out of a tightly packed row by pinching it between the fingertip pads and
+    lift it at least 100 mm. Do not move any other cylinder by more than 20 mm or tip it over. Success
+    as soon as the named cylinder is lifted that far.
+  horizon: 20
+  # start: TCP x, y, z (m) and yaw (deg) each arm takes before the first step, gripper down, so
+  # that its wrist camera sees its half of the table
+  start: {left: [0.40, 0.17, 1.00, 0], right: [0.40, -0.17, 1.00, 0]}
+  start_path: staged         # leave the robot's home in stages (robot.yaml leave_home_first)
+  # names of the camera views in the tiled image, left to right
+  views: {left: left_wrist, head: head, right: right_wrist}
+budget: {sim_seconds: 60, wall_seconds: 1800, api_calls: 30, model_calls: 40, usd: 1.0}

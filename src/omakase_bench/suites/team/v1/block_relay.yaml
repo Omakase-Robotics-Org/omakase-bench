@@ -1,0 +1,73 @@
+id: team/block_relay
+version: 0.1.0
+title: Block relay between two robots
+status: draft
+interfaces: [ee, scripted]
+instruction: "{goal}"
+# Two D1s face each other across one table, 0.95 m apart; each has two blocks on its own left
+# and, one block per turn, moves them into its half of the shared middle zone. Both start at
+# their home; the robot waiting for its turn holds its arms out beside its torso (side_idle).
+robots:
+  - id: a
+    preset: d1
+    base: [0, 0, 0]               # x, y (m), yaw (deg) in the world
+    lift: 0.15                    # while acting; side_idle sets 0.20
+    neck: {pan: 0.0, tilt: 0.65}
+    idle_pose: side_idle
+    agent: {model: scripted/oracle, interface: scripted}
+  - id: b
+    preset: d1
+    base: [0.95, 0, 180]
+    lift: 0.15                    # while acting; side_idle sets 0.20
+    neck: {pan: 0.0, tilt: 0.65}
+    idle_pose: side_idle
+    agent: {model: scripted/oracle, interface: scripted}
+schedule:
+  mode: turns
+  max_turns: 6                    # four placements and two spare turns
+  turn: {sim_seconds: 40, model_calls: 30}
+referee: omakase_bench.tasks.multi_robot.block_relay.relay:RelayReferee
+faults: {inter_robot_collision: fail}
+scene:
+  fixtures:
+    # the table top reaches over the front of both bases (chassis top at 0.50 m), 10 mm short
+    # of the lift poles
+    - {name: table, type: box, size: [0.79, 0.90, 0.04], pos: [0.475, 0.0, 0.73], color: wood, label: table}
+    - {name: leg_1, type: box, size: [0.04, 0.04, 0.71], pos: [0.12, 0.41, 0.355], color: dark, label: table leg}
+    - {name: leg_2, type: box, size: [0.04, 0.04, 0.71], pos: [0.12, -0.41, 0.355], color: dark, label: table leg}
+    - {name: leg_3, type: box, size: [0.04, 0.04, 0.71], pos: [0.83, 0.41, 0.355], color: dark, label: table leg}
+    - {name: leg_4, type: box, size: [0.04, 0.04, 0.71], pos: [0.83, -0.41, 0.355], color: dark, label: table leg}
+    - {name: zone_mark, type: box, size: [0.06, 0.50, 0.001], pos: [0.475, 0.0, 0.7505], color: white, label: middle zone}
+  cameras:
+    showcase: {pos: [1.55, -1.35, 1.65], lookat: [0.475, 0.0, 0.85], fovy: 50}
+    top: {pos: [0.475, 0.0, 2.6], lookat: [0.475, 0.0, 0.75], fovy: 40}
+generator: omakase_bench.tasks.multi_robot.block_relay.relay:block_relay
+params:
+  block: 0.04
+  colours: [red, blue]
+  # in each robot's own base frame: block k stands in source_x[k] x source_y[k]
+  source_x: [[0.37, 0.40], [0.37, 0.40]]
+  source_y: [[0.13, 0.17], [0.25, 0.29]]
+  zone_x: 0.475                   # middle of the table: 0.475 m from both robots
+  zone_half_x: 0.03
+  slot_y: [0.08, 0.18]            # where block k goes in the robot's half of the zone
+  displaced_m: 0.02               # a turn that moves any other block further is invalid
+  open_min: 0.06
+  hands_clear_m: 0.05             # the turn ends once the hands are this far above a placed block
+  first: a
+  start_yaw: 180                  # the scripted solver grips at the quarter turn nearest this yaw
+ee:
+  rules: >-
+    Two robots share this table and take turns. In your turn move exactly one of your own blocks
+    into your half of the middle zone: pinch it between the fingertip pads, put it down upright,
+    open the gripper and lift the hand clear. Do not touch the other robot's blocks.
+  horizon: 40
+  # yaw 180: the jaw orientation of side_idle, so no wrist joint turns by half a revolution
+  start: {left: [0.40, 0.17, 1.00, 180], right: [0.40, -0.17, 1.00, 180]}
+  start_path: staged
+  views: {left: left_wrist, head: head, right: right_wrist}
+video:
+  camera: showcase
+  size: [960, 720]
+  tiles: [a/head, a/left_wrist, b/head, b/left_wrist]
+budget: {sim_seconds: 400, wall_seconds: 3600, api_calls: 200, model_calls: 120, usd: 2.0}

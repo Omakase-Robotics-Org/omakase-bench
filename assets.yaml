@@ -1,0 +1,226 @@
+# Every mesh file in this repository must have an entry here; tools/check_assets.py
+# (run by the test suite) fails otherwise. Fields: path (repository-relative),
+# sha256, source (URL or repository path), commit, license. Files are copied unchanged.
+# The D1 meshes are licensed under Apache-2.0 (NOTICE, "Mesh files").
+schema: omakase-bench/assets/1
+meshes:
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/body_hifi/chassis_link_dark.obj
+  sha256: 5ac37c18a706a134c97149b785aa9d1c3a220c806916265502a731a2569aeaad
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/body_hifi/chassis_link_dark.obj
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/body_hifi/chassis_link_gray.obj
+  sha256: 5e033145b90ecbe52dc95b02349d6378b03f1b77546d3c2d415b8ff25ac3f40e
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/body_hifi/chassis_link_gray.obj
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/body_hifi/chassis_link_navy.obj
+  sha256: 299033e1afa3771cbd7c30d0a1a17d7811abc456fd01c171b4eab1d39e517d1f
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/body_hifi/chassis_link_navy.obj
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/body_hifi/chassis_link_silver.obj
+  sha256: 5989d4cd0aee1282b479e86d7eb4a74db95c167d730301e26f58f690925034d0
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/body_hifi/chassis_link_silver.obj
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/body_hifi/chassis_link_white.obj
+  sha256: aac625d3659ef589246b5f8b1ebfa9b81cf1cd5c88200e2cdd0ebf7c8b84aabe
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/body_hifi/chassis_link_white.obj
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/body_hifi/head_link_cyan.obj
+  sha256: 9f4f215dd89c7be3d30be5ef92dc06850452465e602d5601231accebecf93e22
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/body_hifi/head_link_cyan.obj
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/body_hifi/head_link_dark.obj
+  sha256: 9a03c29ea677b15d0240f277f2f7c988c44fb2a64b460b527d9f5de612d1ede2
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/body_hifi/head_link_dark.obj
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/body_hifi/head_link_navy.obj
+  sha256: 514c0eebdaa88182fdf7a94d8cf75c4f14f30f17368dfcf00b4a094a5a56c68b
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/body_hifi/head_link_navy.obj
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/body_hifi/head_link_optic.obj
+  sha256: d9dc47d70c4f6bad17a912549193c88339f9a6b975ae9da1867136db72967632
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/body_hifi/head_link_optic.obj
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/body_hifi/head_link_red.obj
+  sha256: 9225075c5ce1de21c20739ae1df9b4733260ccab9156c42ccd32750ba47ca889
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/body_hifi/head_link_red.obj
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/body_hifi/head_link_silver.obj
+  sha256: 8b6230862447625fed2e99075a4d8a1d902108ef7c572e678f102b04a203a57f
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/body_hifi/head_link_silver.obj
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/body_hifi/head_link_white.obj
+  sha256: 7cc6fa22940c69b834533a1496f444b6c152c243cfba209f1384dbb5beaf836a
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/body_hifi/head_link_white.obj
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/body_hifi/neck_pan_link_silver.obj
+  sha256: 47b8db4fea408adf8da1390d91d606a00313e6c58a3173c3ef1700d105ba90db
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/body_hifi/neck_pan_link_silver.obj
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/body_hifi/torso_column_dark.obj
+  sha256: 35cc700489794eb40754024094fe3f1cc119f84028a48c7718f80f8b5c5ab73b
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/body_hifi/torso_column_dark.obj
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/body_hifi/torso_column_navy.obj
+  sha256: cce813779e1257d83f87e8d7e285f7a7bc53422c43e69677c8dd05523c3e169f
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/body_hifi/torso_column_navy.obj
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/body_hifi/torso_column_red.obj
+  sha256: 3c3649253c35257581047b2358050ba772c7d2e86443226faa85cca3af0a2502
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/body_hifi/torso_column_red.obj
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/body_hifi/torso_column_silver.obj
+  sha256: 21ea70d534c32de70184ce42257880ae7ee6b0fa79853312cb89b8e938dd9a95
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/body_hifi/torso_column_silver.obj
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/body_hifi/torso_column_white.obj
+  sha256: 8d3c4b622ee7ed4dca6aeffe8eddadf6c437eb1eb826b14faec6232c159ee5d9
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/body_hifi/torso_column_white.obj
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/gripper_default/base_link.STL
+  sha256: 7563e9b233f1a198c448ba120914ccad2854ea8f7aa1a7572a0c8198a082d657
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/gripper_default/base_link.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/gripper_default/camera_plate.STL
+  sha256: 6a4a2c13cbdc9b8076be5999a109e50f873b002f7c40d4b8e51a4d259ea442b5
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/gripper_default/camera_plate.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/gripper_default/inner_link_l.STL
+  sha256: 9209b93cb6fb9575222a9c4b686071965aee45d5565c884464e095e3945e1155
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/gripper_default/inner_link_l.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/gripper_default/inner_link_r.STL
+  sha256: 960c5f29031ea560119d0eac06b8a1a478f68f089bb27406daad915dc588ca0d
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/gripper_default/inner_link_r.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/gripper_default/jaw_l.STL
+  sha256: e0c084478ea62aa935c778acc4e4357a8a446ed6b867420e76593cd62e18ea6f
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/gripper_default/jaw_l.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/gripper_default/jaw_r.STL
+  sha256: e76f836ac3b83fbf47e27317b93d2656ef4ffa66fdd2fac2b2ccad6a91bb0da1
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/gripper_default/jaw_r.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/gripper_default/outer_link_l.STL
+  sha256: e41f131499866b015b1bd1488e50e8c4b89207ef8db4c5a9ac929cf15e244cf6
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/gripper_default/outer_link_l.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1/meshes/gripper_default/outer_link_r.STL
+  sha256: 11e3234730b59a628355d6e32bd4ca9ece39061d0fa3bbff1ed7d3db2a1d6839
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1/meshes/gripper_default/outer_link_r.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1_arm/left/meshes/Base_L.STL
+  sha256: 268a09e335f69f1509be7cc47e2c039e00647f8fb49c7fafadcf53f164532baa
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1_arm/left/meshes/Base_L.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1_arm/left/meshes/Link1_L.STL
+  sha256: d34b22db1280e233435425c8ecc94f4323652458dbae6a767cd04ed18c9b1f81
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1_arm/left/meshes/Link1_L.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1_arm/left/meshes/Link2_L.STL
+  sha256: 75e99bb1a7d2ef0d5c4e5bfc30afc5e396acfa6b5cfd3ad9973b01d551550ed0
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1_arm/left/meshes/Link2_L.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1_arm/left/meshes/Link3_L.STL
+  sha256: 4acee6cf5846c46485758edef05659f7b34d2854c0df2fbf5df630a537401b56
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1_arm/left/meshes/Link3_L.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1_arm/left/meshes/Link4_L.STL
+  sha256: aafd2b1869e350979c38f540e4f8c38a948dd3abb043cd66034d87066737ea54
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1_arm/left/meshes/Link4_L.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1_arm/left/meshes/Link5_L.STL
+  sha256: f69eaea9cfe6ff92ef49cd7b77ac576a3a1d67aa1e80c8b6ba42dc92833b3884
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1_arm/left/meshes/Link5_L.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1_arm/left/meshes/Link6_L.STL
+  sha256: 370d1ca5e176d3661d72acb06805b9e7066380358995ff44612b0f114127820d
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1_arm/left/meshes/Link6_L.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1_arm/left/meshes/Link7_L.STL
+  sha256: 9a304a3eddd05288f92318b3bdab57fe43e6ced8b45ab5c6fe9ed682e85e68e6
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1_arm/left/meshes/Link7_L.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1_arm/left/meshes/TCP_Link_L.STL
+  sha256: 131ee3817f88b2f8e72f7f4831b8779f4dfae2afabaf170a7a0a7306a2e2e309
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1_arm/left/meshes/TCP_Link_L.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1_arm/right/meshes/Base_R.STL
+  sha256: 268a09e335f69f1509be7cc47e2c039e00647f8fb49c7fafadcf53f164532baa
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1_arm/right/meshes/Base_R.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1_arm/right/meshes/Link1_R.STL
+  sha256: 3e64da8f8dfbd1d1ed4ff9deb41d5ba6a48f28f2fdb7c31cdf68e1ddec191a76
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1_arm/right/meshes/Link1_R.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1_arm/right/meshes/Link2_R.STL
+  sha256: 75e99bb1a7d2ef0d5c4e5bfc30afc5e396acfa6b5cfd3ad9973b01d551550ed0
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1_arm/right/meshes/Link2_R.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1_arm/right/meshes/Link3_R.STL
+  sha256: 5f447ce4639dff4a9ba0e5b6ee1cdead0ad5a06f87f325fae9a0e78cc90d3440
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1_arm/right/meshes/Link3_R.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1_arm/right/meshes/Link4_R.STL
+  sha256: aafd2b1869e350979c38f540e4f8c38a948dd3abb043cd66034d87066737ea54
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1_arm/right/meshes/Link4_R.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1_arm/right/meshes/Link5_R.STL
+  sha256: 5c2b41a04aa6116813990720d07ac9c73b54da427c7bfd004fd6c1441f60a17b
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1_arm/right/meshes/Link5_R.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1_arm/right/meshes/Link6_R.STL
+  sha256: b358d960a7b48bc01a91ba8595601ba8636eaef6374c440ee47b59d3d94d96c3
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1_arm/right/meshes/Link6_R.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1_arm/right/meshes/Link7_R.STL
+  sha256: b5800d74d62b8749c6449d8cef9a4ab9e6a78fe32bf2277ee29ca27d4e55a0ff
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1_arm/right/meshes/Link7_R.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)
+- path: src/omakase_bench/robots/d1/meshes/d1_arm/right/meshes/TCP_Link_R.STL
+  sha256: 131ee3817f88b2f8e72f7f4831b8779f4dfae2afabaf170a7a0a7306a2e2e309
+  source: Omakase-Robotics-Org/manipulation-kit-assets:manipulation_kit/description/d1_arm/right/meshes/TCP_Link_R.STL
+  commit: d7ecd505d607b06ef6c07ee9e662e3e237cb5a61
+  license: Apache-2.0 (see NOTICE)

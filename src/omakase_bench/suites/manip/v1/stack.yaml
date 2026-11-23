@@ -1,0 +1,37 @@
+id: manip/stack
+version: 1.1.0
+title: Stack the blocks in order
+status: draft
+interfaces: [ee, scripted]
+instruction: "{goal}"
+scene:
+  robot: {preset: d1, base: [0, 0, 0], lift: 0.15, neck: {pan: 0.0, tilt: 0.65}}
+  fixtures:
+    - {name: table, type: box, size: [0.60, 1.00, 0.75], pos: [0.63, 0.0, 0.375], color: wood, label: table}
+  cameras:
+    showcase: {pos: [1.20, -0.50, 1.38], lookat: [0.38, 0.0, 0.86], fovy: 45}
+    top: {pos: [0.45, 0.0, 1.9], lookat: [0.45, 0.0, 0.75], fovy: 40}
+generator: omakase_bench.tasks.manipulation.tabletop.generators:stack
+params:
+  colours: [red, green, blue]
+  block: 0.04
+  x: [0.36, 0.46]
+  y_abs: [0.10, 0.32]
+  separation: 0.10              # centre to centre: the open jaws clear a neighbouring block
+  align_tol: 0.015
+  open_min: 0.06
+success: {goal: "omakase_bench.tasks.manipulation.tabletop.generators:stack_ok"}
+ee:
+  # what the task demands beyond the episode's goal sentence
+  rules: >-
+    Stack the coloured blocks into one tower in the stated order, on top of the bottom block, which
+    must not be touched. Pinch each block between the fingertip pads. The tower must stand on its own
+    with both grippers open at the end.
+  horizon: 50
+  # start: TCP x, y, z (m) and yaw (deg) each arm takes before the first step, gripper down, so
+  # that its wrist camera sees its half of the table
+  start: {left: [0.40, 0.17, 1.00, 0], right: [0.40, -0.17, 1.00, 0]}
+  start_path: staged         # leave the robot's home in stages (robot.yaml leave_home_first)
+  # names of the camera views in the tiled image, left to right
+  views: {left: left_wrist, head: head, right: right_wrist}
+budget: {sim_seconds: 90, wall_seconds: 2400, api_calls: 60, model_calls: 80, usd: 1.5}

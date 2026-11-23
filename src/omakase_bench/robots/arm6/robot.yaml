@@ -1,0 +1,52 @@
+# arm6: one six-joint arm on a pedestal with a parallel gripper, described by boxes only (arm6.urdf).
+# It models no product. It exists to show that a robot is a URDF plus this file: nothing in the harness
+# or the backends names its joints or links.
+name: arm6
+version: 1
+urdf: arm6.urdf
+# Frame every model-facing coordinate is expressed in: x forward, y left, z up from the floor.
+base_link: base_footprint
+# No mobile_base, torso_lift or neck: the pedestal stands at the world origin.
+arms:
+  arm:
+    joints: [joint1, joint2, joint3, joint4, joint5, joint6]
+    end_effector: gripper
+    home: home
+    max_joint_speed: 1.0      # rad/s, harness trajectory limit
+    # no side: the one arm serves targets on either side of the base
+    # joints 1 and 2 turn inside the shoulder block on top of the pedestal
+    self_collision_from: joint3
+end_effectors:
+  gripper:
+    type: parallel_gripper
+    link: tool_link
+    tcp_link: tcp
+    approach_axis: [1.0, 0.0, 0.0]   # in the TCP frame: the fingers point along the tool's x
+    # the first finger's sliding axis is the jaw-closing axis; with the right finger first, wrist angle 0
+    # of a downward grasp is the home orientation
+    fingers:
+      - {joint: finger_r_joint, open: 0.0, closed: 0.04}
+      - {joint: finger_l_joint, open: 0.0, closed: 0.04}
+    pad_links: [finger_r_link, finger_l_link]
+    max_opening: 0.080
+    force: 60.0
+    # the fingers end 10 mm past the TCP whatever the opening (they slide, they do not swing)
+    pad_length: 0.030
+    pad_band: 0.027
+    fingertip_offset: {open: 0.010, closed: 0.010}
+    tip_reach: 0.010
+cameras:
+  head: {link: head_camera_optical, fovy: 50.0, width: 640, height: 480, depth_range: [0.2, 3.0], description: fixed camera on a mast}
+  wrist: {link: wrist_camera_optical, fovy: 66.0, width: 640, height: 480, depth_range: [0.04, 1.0], description: camera above the gripper}
+poses:
+  # the gripper points straight down 0.93 m above the floor, 0.38 m in front of the pedestal axis
+  home:
+    joints: {joint1: 0.0, joint2: -1.2, joint3: 1.9, joint4: 0.0, joint5: 0.8708, joint6: 0.0}
+  # folded above the pedestal, clear of a table in front of it
+  stow:
+    joints: {joint1: 0.0, joint2: -1.9, joint3: 2.6, joint4: 0.0, joint5: 0.0, joint6: 0.0}
+actuation:
+  # [kp, force limit]: the first three joints carry the arm, the last three the wrist
+  arm_proximal: [800, 150]
+  arm_distal: [200, 40]
+  arm_proximal_joints: 3

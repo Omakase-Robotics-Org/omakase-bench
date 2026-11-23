@@ -1,0 +1,5 @@
+id: manip
+version: 1
+description: Tabletop manipulation with several named objects, for the end-effector interface.
+tasks: [chess_move, stack, sort, clutter_pick]
+seeds: [0, 1, 2, 3, 4]

@@ -1,0 +1,42 @@
+omakase-bench
+Copyright 2026 Omakase Robotics
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Third-party material
+--------------------
+
+src/omakase_bench/robots/d1/d1.urdf, d1.meshes.urdf and spec.json
+    Composed robot description of the D1 from manipulation-kit, a motion
+    library of the copyright holder named above (Apache License 2.0), copied
+    unchanged.
+    See src/omakase_bench/robots/d1/PROVENANCE.md.
+
+src/omakase_bench/backends/mujoco/robot_mjcf.py (urdf_to_mjcf_string)
+    Follows the URDF import settings of manipulation-kit's
+    src/manipulation_kit/description/mjcf.py (Apache License 2.0).
+
+Mesh files (src/omakase_bench/robots/d1/meshes/, 44 files listed in assets.yaml)
+    Visual meshes of the D1 robot: body shells, gripper parts and
+    arm links, copied unchanged from the manipulation-kit-assets repository
+    of the same organisation at the commit assets.yaml records.
+
+    Same copyright holder. Licensed under the Apache License,
+    Version 2.0, like the rest of this repository: the files may be used,
+    copied, modified and redistributed, also commercially, with this notice
+    and the licence kept. The meshes describe the outer shape of the robot
+    for simulation and rendering; no licence to manufacture the robot, and no
+    trademark licence, is given. The copyright holder's name and the name "D1" may be
+    used to say what the meshes depict.
+
+Robot daemon API document (src/omakase_bench/robots/d1/api/openapi.json)
+    A subset of the OpenAPI document of the D1 robot daemon, Copyright 2026
+    the same copyright holder, copied unchanged and distributed under the
+    Apache License 2.0 with the rest of this repository. The info.license field
+    inside the copied document is the source repository's and is kept only
+    because the subset is copied unchanged. See
+    src/omakase_bench/robots/d1/api/PROVENANCE.md.
+
+Camera interface description (src/omakase_bench/robots/d1/api/cameras.md)
+    A description of the interfaces of the D1's camera software, written for
+    this repository; it copies no source.

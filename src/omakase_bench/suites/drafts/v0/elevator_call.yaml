@@ -1,0 +1,48 @@
+id: drafts/elevator_call
+version: 0.1.0
+status: draft
+title: Call the elevator and ride it
+interfaces: [tools, code, scripted]
+instruction: >
+  Press the elevator call button, wait for the elevator door to open, then drive
+  into the elevator car.
+scene:
+  robot: {preset: d1, base: [0.0, 0.0, 0], lift: 0.10, neck: {pan: 0.0, tilt: 0.2}}
+  fixtures:
+    # a lobby wall at x = 2.0 with a 1.1 m opening at y in [-0.55, 0.55]
+    - {name: wall_left, type: box, size: [0.10, 1.45, 2.4], pos: [2.05, 1.275, 1.2], color: wall, label: wall}
+    - {name: wall_right, type: box, size: [0.10, 1.45, 2.4], pos: [2.05, -1.275, 1.2], color: wall, label: wall}
+    - {name: wall_top, type: box, size: [0.10, 1.10, 0.30], pos: [2.05, 0.0, 2.25], color: wall, label: wall}
+    # the car: back and side walls, floor flush with the lobby
+    - {name: car_back, type: box, size: [0.06, 1.5, 2.4], pos: [3.65, 0.0, 1.2], color: steel, label: elevator wall}
+    - {name: car_left, type: box, size: [1.55, 0.06, 2.4], pos: [2.875, 0.78, 1.2], color: steel, label: elevator wall}
+    - {name: car_right, type: box, size: [1.55, 0.06, 2.4], pos: [2.875, -0.78, 1.2], color: steel, label: elevator wall}
+  articulated:
+    - name: call_button
+      type: button
+      pos: [2.0, -1.25, 1.05]   # clear of the door panels when they open
+      yaw_deg: 180
+      color: white
+      params: {radius: 0.022, travel: 0.008, protrusion: 0.012, stiffness: 300, press_threshold: 0.6}
+    - name: car_door
+      type: sliding_door
+      pos: [1.975, 0.0, 0.0]   # runs 1 cm in front of the wall face (x = 2.0)
+      size: [0.03, 1.10, 2.10]
+      color: steel
+      params: {opens_with: call_button, delay: 3.0, speed: 0.5, hold_open: 25.0}
+  regions:
+    car: {lo: [2.35, -0.55, -0.1], hi: [3.55, 0.55, 0.5]}
+  cameras:
+    showcase: {pos: [-0.6, -2.4, 2.4], lookat: [1.8, 0.0, 0.8], fovy: 55}
+    top: {pos: [1.6, 0.0, 5.5], lookat: [1.6, 0.0, 0.0], fovy: 60}
+variation:
+  robot.base: {uniform_box: [[0.0, -0.3, -0.3], [0.4, 0.3, 0.3]]}
+success:
+  all:
+    - {pressed: call_button}
+    - {base_in_region: car}
+subgoals:
+  - {name: pressed, pred: {pressed: call_button}, weight: 0.4}
+  - {name: door_open, pred: {door_open: [car_door, 0.8]}, weight: 0.2}
+  - {name: inside, pred: {base_in_region: car}, weight: 0.4}
+budget: {sim_seconds: 180, wall_seconds: 1200, api_calls: 60, model_calls: 50, usd: 3.0}
