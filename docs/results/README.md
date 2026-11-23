@@ -21,6 +21,53 @@ on the suites as published (`suites/frozen.yaml`).
 Two D1 robots at one board, one model per robot, the `ee` interface: each model sees its own cameras, names
 its move to the referee and moves the pieces with its arms. No demonstrations.
 
+### A game on `games@1` as published
+
+The published rule: a position the referee has to restore takes 1 minute from the mover's clock, no number
+of faults ends the game, and a robot has 4 replies to put right what the referee lists. White
+`anthropic/claude-fable-5-2` (`effort=low`), Black `openai/gpt-6.2-astra` (`reasoning=medium`), played to
+the end, nothing adjudicated.
+
+| | |
+| --- | --- |
+| Result | 1-0, checkmate: `52. Qc5#` |
+| Half-moves | 103 |
+| Simulated time | 2946 s |
+| Commit played on | `38830e7` (the tree of the first public release) |
+| PGN | [chess_game5_fable52_vs_astra_games1.pgn](chess_game5_fable52_vs_astra_games1.pgn) |
+
+| | White | Black |
+| --- | --- | --- |
+| Model | claude-fable-5-2 | gpt-6.2-astra |
+| Moves | 52 | 51 |
+| Illegal move attempts | 0 | 0 |
+| Manipulation faults | 12 | 6 |
+| Clock taken by fault penalties | 720 s | 360 s |
+| Pieces knocked over | 7 | 6 |
+| Pieces the referee restored | 17 | 8 |
+| Corrections after "done" | 12 | 6 |
+| Captures | 14 | 12 |
+| Turns with a hand-over between the arms | 4 | 0 |
+| Contacts between the robots | 0 | 0 |
+| Thinking time (model calls) | 2537 s | 1852 s |
+| Execution time (simulated) | 415 s | 363 s |
+| Clock left of 3600 s + 30 s per move | 1487 s | 2555 s |
+| Model calls | 656 | 573 |
+| Input tokens (of which cached) | 4 311 969 (3 178 588) | 2 801 468 (1 999 129) |
+| Output tokens | 164 268 | 23 891 |
+| Cost | $16.82 | $8.57 |
+| Average centipawn loss | 71.9 | 79.8 |
+| Inaccuracies / mistakes / blunders | 1 / 5 / 8 | 3 / 4 / 6 |
+
+Every one of the 18 corrections used all 4 replies and ended with the referee restoring the position, so
+each became a fault. 85 of the 103 turns were valid. One robot touched a piece while returning to its
+waiting pose (reported, not ruled).
+
+The largest losses by the engine's count: for White `37. Nb3` (it prefers `Ne6`, 491 cp), `16. Kf1`
+(`bxc3`, 410 cp), `34. Nc5` (`Nxg7`, 391 cp) and `38. Bc8` (`f6`, 388 cp); for Black `39... Re3+` (`Kc7`,
+1101 cp), `28... Kb8` (`Ng4+`, 499 cp), `22... Rd1+` (`Rd3`, 470 cp) and `36... Kb6` (`Kd6`, 335 cp).
+White promoted a pawn on move 45 and mated with king and queen.
+
 ### A game under the first manipulation-fault rule
 
 Played under the first version of the rule (`docs/decisions.md`, D25): a position the referee has to
